@@ -1,13 +1,14 @@
 // src/render/heatmap.js
 import { state, subscribe } from '../state.js';
 
-const WORLD_SIZE = 17280;             // CSL 坐标系域 (-8640 ~ +8640)
-const HALF_WORLD = WORLD_SIZE / 2;
-const GRID_RES = 20;                  // 20u 网格
-const COLS = Math.ceil(WORLD_SIZE / GRID_RES); // 864
-const ROWS = Math.ceil(WORLD_SIZE / GRID_RES); // 864
+// 改为 let，使其可以被动态更新
+let WORLD_SIZE = 17280;
+let HALF_WORLD = WORLD_SIZE / 2;
+let GRID_RES = 80;
+let COLS = Math.ceil(WORLD_SIZE / GRID_RES);
+let ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
 
-const gridData = new Int32Array(COLS * ROWS);
+let gridData = new Int32Array(COLS * ROWS);
 let maxRef = 1;
 
 export function initRenderer(DOM) {
@@ -25,6 +26,22 @@ export function initRenderer(DOM) {
         render();
     }
 
+    // 🚀 新增：当用户调节地图大小或网格精度时，重新分配内存
+    function updateGridConfig() {
+        WORLD_SIZE = state.mapSizeTiles * 1920;
+        HALF_WORLD = WORLD_SIZE / 2;
+
+        // 🚨 换算逻辑：用户设定的 10u，在坐标系计算时其实是 80m
+        GRID_RES = state.gridSize * 8;
+
+        COLS = Math.ceil(WORLD_SIZE / GRID_RES);
+        ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
+
+        gridData = new Int32Array(COLS * ROWS);
+        console.log(`[Renderer] Grid Updated: ${COLS}x${ROWS}, Cell Size: ${state.gridSize}u (${GRID_RES}m)`);
+        aggregateData();
+    }
+
     function aggregateData() {
         gridData.fill(0);
         const batches = state.rawBatches;
@@ -34,29 +51,26 @@ export function initRenderer(DOM) {
         const showO = state.filters.O;
         const showD = state.filters.D;
 
-        let matchCount = 0; // 诊断变量
-
         for (let b = 0; b < batches.length; b++) {
             const batch = batches[b];
             for (let i = 0; i < batch.length; i += 5) {
-                // 筛选当前小时的数据
-                // if (batch[i + 4] === timeSlice) {
-                matchCount++;
+                // TODO: 测试完毕后记得把时间过滤 if(batch[i+4] === timeSlice) 加回来
                 if (showO) {
                     const col = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
-                    const row = Math.floor((batch[i + 1] + HALF_WORLD) / GRID_RES);
+                    // 🚀 核心修复：CSL 的 Z轴向上，Canvas 的 Y轴向下。此处将 Z 翻转映射为 Y
+                    const row = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
                     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
                         gridData[row * COLS + col]++;
                     }
                 }
                 if (showD) {
                     const col = Math.floor((batch[i + 2] + HALF_WORLD) / GRID_RES);
-                    const row = Math.floor((batch[i + 3] + HALF_WORLD) / GRID_RES);
+                    // 🚀 核心修复
+                    const row = Math.floor((HALF_WORLD - batch[i + 3]) / GRID_RES);
                     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
                         gridData[row * COLS + col]++;
                     }
                 }
-                // }
             }
         }
 
@@ -71,13 +85,8 @@ export function initRenderer(DOM) {
         }
         if (maxRef < 1) maxRef = 1;
 
-        // 🚨 打印日志：帮助排查这一小时内到底有没有拿到数据
-        console.log(`[Renderer] 时间切片 ${timeSlice}:00 | 命中记录: ${matchCount} | 激活网格: ${activeValues.length} | 极值MaxRef: ${maxRef}`);
-
-        // 🚨 修复核心：如果用户没有上传地图图片，我们要强制初始化一个全局相机视角
         if (state.camera.zoom === 1 && state.mapDimensions.width === 0) {
             const rect = canvas.getBoundingClientRect();
-            // 让 17280 的虚拟世界刚好适配屏幕
             const fitZoom = Math.min(rect.width / WORLD_SIZE, rect.height / WORLD_SIZE) * 0.9;
             state.camera = {
                 x: (rect.width - WORLD_SIZE * fitZoom) / 2,
@@ -90,7 +99,9 @@ export function initRenderer(DOM) {
     }
 
     function getCyberColor(value) {
-        let ratio = Math.log(value + 1) / Math.log(maxRef + 1);
+        const safeMaxRef = Math.max(maxRef, 1);
+        let ratio = Math.log(value + 1) / Math.log(safeMaxRef + 1);
+        if (isNaN(ratio) || !isFinite(ratio)) ratio = 0;
         ratio = Math.min(Math.max(ratio, 0), 1);
 
         const a = Math.min(0.2 + ratio * 0.7, 0.85);
@@ -119,29 +130,21 @@ export function initRenderer(DOM) {
             const { width: cvsW, height: cvsH } = canvas.getBoundingClientRect();
             ctx.clearRect(0, 0, cvsW, cvsH);
 
-            // 🚨 修复核心：如果没传底图，强制使用 WORLD_SIZE 作为虚拟基准尺寸
             const imgW = state.mapDimensions.width || WORLD_SIZE;
             const imgH = state.mapDimensions.height || WORLD_SIZE;
-
-            if (!imgW || !imgH) {
-                renderFrameId = null;
-                return;
-            }
+            if (!imgW || !imgH) { renderFrameId = null; return; }
 
             const { x, y, zoom } = state.camera;
+            if (isNaN(x) || isNaN(y) || isNaN(zoom) || zoom <= 0.001) {
+                renderFrameId = null; return;
+            }
+
             ctx.save();
             ctx.translate(x, y);
             ctx.scale(zoom, zoom);
 
             const cellW = imgW / COLS;
             const cellH = imgH / ROWS;
-
-            // 修复网格间隙算法，使其与缩放和图片分辨率自适应
-            const gapThreshold = WORLD_SIZE / imgW * 2.5;
-            const gapX = zoom > gapThreshold ? (cellW * 0.1) : 0;
-            const gapY = zoom > gapThreshold ? (cellH * 0.1) : 0;
-            const drawW = cellW - gapX;
-            const drawH = cellH - gapY;
 
             const invZoom = 1 / zoom;
             const screenLeft = -x * invZoom;
@@ -159,12 +162,16 @@ export function initRenderer(DOM) {
                     const val = gridData[row * COLS + col];
                     if (val > 0) {
                         ctx.fillStyle = getCyberColor(val);
-                        ctx.fillRect(
-                            col * cellW + gapX / 2,
-                            row * cellH + gapY / 2,
-                            drawW,
-                            drawH
-                        );
+                        // 画实心矩形
+                        ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
+
+                        // 仅当缩放倍数够大（网格视觉尺寸大于 5px 时）才绘制线框，防止密集时白线糊成一片
+                        // 🚨 修改点：显式绘制网格，使用深色半透明（如黑色 40%），让霓虹色块被深色边界包裹
+                        if (cellW * zoom > 5) {
+                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                            ctx.lineWidth = 1 / zoom; // 保持物理 1 像素粗细
+                            ctx.strokeRect(col * cellW, row * cellH, cellW, cellH);
+                        }
                     }
                 }
             }
@@ -174,7 +181,7 @@ export function initRenderer(DOM) {
         });
     }
 
-    window.addEventListener('resize', () => { resizeCanvas(); });
+    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
     subscribe('camera', render);
@@ -183,60 +190,7 @@ export function initRenderer(DOM) {
     subscribe('rawBatches', aggregateData);
     subscribe('mapDimensions', aggregateData);
 
-    // ==========================================
-    // 🕵️ 挂载全局诊断工具 (请在控制台调用)
-    // ==========================================
-    window.__DEBUG_EXPORT_HEATMAP__ = () => {
-        // 1. 扫描聚合后的二维网格，找出有数据的格子
-        const activeGrids = [];
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
-                const val = gridData[r * COLS + c];
-                if (val > 0) {
-                    activeGrids.push({ 
-                        row: r, col: c, val: val,
-                        // 反推这个格子对应的世界坐标系大概位置
-                        worldX_approx: c * (WORLD_SIZE / COLS) - HALF_WORLD,
-                        worldY_approx: r * (WORLD_SIZE / ROWS) - HALF_WORLD
-                    });
-                }
-            }
-        }
-
-        // 2. 从 Worker 传回的 Float32Array 截取前 10 条原始点位
-        const sampleRaw = [];
-        if (state.rawBatches && state.rawBatches.length > 0) {
-            const batch = state.rawBatches[0];
-            for(let i = 0; i < Math.min(batch.length, 50); i += 5) {
-                sampleRaw.push({
-                    Ox: batch[i], Oy: batch[i+1],
-                    Dx: batch[i+2], Dy: batch[i+3],
-                    Hour: batch[i+4]
-                });
-            }
-        }
-
-        // 3. 打包当前相机和画布状态
-        const debugPayload = {
-            engineState: {
-                maxRef: maxRef,
-                camera: state.camera,
-                mapDimensions: state.mapDimensions,
-                canvasWidth: canvas.width,
-                canvasHeight: canvas.height,
-            },
-            dataStats: {
-                totalActiveGrids: activeGrids.length,
-                // 只看流量最高的前 10 个格子，防止日志太长
-                topGrids: activeGrids.sort((a, b) => b.val - a.val).slice(0, 10)
-            },
-            rawSamples: sampleRaw
-        };
-
-        console.log("============= 🧰 ODMatrix 诊断报告 =============");
-        console.log(JSON.stringify(debugPayload, null, 2));
-        console.log("================================================");
-        
-        return "诊断报告已输出，请复制上方的 JSON 提供分析。";
-    };
+    // 监听新增的尺寸配置变化
+    subscribe('mapSizeTiles', updateGridConfig);
+    subscribe('gridSize', updateGridConfig);
 }

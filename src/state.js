@@ -4,19 +4,19 @@ const listeners = new Map();
 const _state = {
     timeSlice: 12,
     filters: { O: true, D: true },
-
-    // 新增：地图与相机状态
+    
+    // 图层透明度控制
     mapOpacity: 60,
+    heatmapOpacity: 100, // 新增：热力图图层透明度，默认 100%
+    
     mapImageUrl: null,
-    mapDimensions: { width: 0, height: 0 }, // 新增：记录图片的自然宽高
+    mapDimensions: { width: 0, height: 0 },
     camera: { x: 0, y: 0, zoom: 1 },
+    rawBatches: [],
 
-    timeSlice: 12,
-    filters: { O: true, D: true },
-
-    // 新增：存放所有 Worker 传回来的 Float32Array 批次
-    rawBatches: []
-
+    // 地图与网格动态配置
+    mapSizeTiles: 9, 
+    gridSize: 10,    // 🚨 变更为：以 u 为单位，默认 10u (10u = 80m)
 };
 
 export const state = new Proxy(_state, {
