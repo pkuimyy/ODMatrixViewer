@@ -38,7 +38,9 @@ export function initRenderer(DOM) {
         ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
 
         gridData = new Int32Array(COLS * ROWS);
-        console.log(`[Renderer] Grid Updated: ${COLS}x${ROWS}, Cell Size: ${state.gridSize}u (${GRID_RES}m)`);
+        console.log(
+            `[Renderer] Grid Updated: ${COLS}x${ROWS}, Cell Size: ${state.gridSize}u (${GRID_RES}m)`
+        );
         aggregateData();
     }
 
@@ -48,14 +50,17 @@ export function initRenderer(DOM) {
         if (!batches || batches.length === 0) return;
 
         const timeSlice = state.timeSlice;
+        const showAllDay = state.showAllDay; // 🚀 提取全天状态
         const showO = state.filters.O;
         const showD = state.filters.D;
-
-        const focusedGrid = state.focusedGrid; // 提取焦点状态
+        const focusedGrid = state.focusedGrid;
 
         for (let b = 0; b < batches.length; b++) {
             const batch = batches[b];
             for (let i = 0; i < batch.length; i += 5) {
+                const recordHour = batch[i + 4];
+                // 🎯 核心改动：如果“全天模式”未开启，且“小时”不匹配，才跳过
+                if (!showAllDay && recordHour !== timeSlice) continue;
 
                 const oCol = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
                 const oRow = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
@@ -120,7 +125,7 @@ export function initRenderer(DOM) {
 
         // 2. 透明度控制：低值透明度高，高值逐渐不透明
         // 保证最低也有 0.15 的透明度，最高达到 0.9（保留一点点透气感）
-        const a = Math.min(0.15 + ratio * 0.75, 0.90);
+        const a = Math.min(0.15 + ratio * 0.75, 0.9);
 
         let r, g, b;
 
@@ -134,15 +139,15 @@ export function initRenderer(DOM) {
         } else if (ratio < 0.66) {
             // 阶段 2：亮橙 -> 深红 (视觉焦点开始形成)
             const t = (ratio - 0.33) / 0.33;
-            r = Math.floor(255 - t * 75);  // 255 -> 180
+            r = Math.floor(255 - t * 75); // 255 -> 180
             g = Math.floor(150 - t * 150); // 150 -> 0
             b = 0;
         } else {
             // 阶段 3：深红 -> 暗紫/黑 (极高流量的绝对核心)
             const t = (ratio - 0.66) / 0.34;
             r = Math.floor(180 - t * 160); // 180 -> 20
-            g = 0;                         // 0 -> 0
-            b = Math.floor(t * 50);        // 0 -> 50 (加入一点蓝调，形成暗紫，比纯黑更有质感)
+            g = 0; // 0 -> 0
+            b = Math.floor(t * 50); // 0 -> 50 (加入一点蓝调，形成暗紫，比纯黑更有质感)
         }
 
         return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
@@ -159,11 +164,15 @@ export function initRenderer(DOM) {
 
             const imgW = state.mapDimensions.width || WORLD_SIZE;
             const imgH = state.mapDimensions.height || WORLD_SIZE;
-            if (!imgW || !imgH) { renderFrameId = null; return; }
+            if (!imgW || !imgH) {
+                renderFrameId = null;
+                return;
+            }
 
             const { x, y, zoom } = state.camera;
             if (isNaN(x) || isNaN(y) || isNaN(zoom) || zoom <= 0.001) {
-                renderFrameId = null; return;
+                renderFrameId = null;
+                return;
             }
 
             ctx.save();
@@ -265,4 +274,6 @@ export function initRenderer(DOM) {
     subscribe('mapSizeTiles', updateGridConfig);
     subscribe('gridSize', updateGridConfig);
     subscribe('focusedGrid', aggregateData);
+
+    subscribe('showAllDay', aggregateData);
 }

@@ -27,6 +27,33 @@ export function initSidebar(DOM) {
     const domGridSlider = document.getElementById('grid-slider');
     const domGridDisplay = document.getElementById('grid-display');
 
+    // 🚀 1. 获取新按钮 DOM
+    const domBtnAllDay = document.getElementById('btn-all-day');
+
+    // 🚀 2. 绑定点击事件，翻转状态
+    domBtnAllDay.addEventListener('click', () => {
+        state.showAllDay = !state.showAllDay;
+    });
+
+    // 🚀 3. 订阅状态变化，更新 UI
+    subscribe('showAllDay', (isAllDay) => {
+        if (isAllDay) {
+            // 激活状态：变成深蓝色主按钮，并视觉上禁用滑块
+            domBtnAllDay.classList.add('btn--primary');
+            domBtnAllDay.textContent = '🌍 All Day View: Active';
+            DOM.timeSlider.disabled = true;
+            DOM.timeSlider.style.opacity = '0.4';
+            DOM.timeSlider.style.cursor = 'not-allowed';
+        } else {
+            // 关闭状态：恢复默认外观
+            domBtnAllDay.classList.remove('btn--primary');
+            domBtnAllDay.textContent = '🌍 Show All Day (24h)';
+            DOM.timeSlider.disabled = false;
+            DOM.timeSlider.style.opacity = '1';
+            DOM.timeSlider.style.cursor = 'pointer';
+        }
+    });
+
     // 下拉框 3选1
     domTilesSelect.addEventListener('change', (e) => {
         state.mapSizeTiles = parseInt(e.target.value, 10);
@@ -81,7 +108,10 @@ export function initSidebar(DOM) {
             DOM.fileStatus.textContent = `📍 Focused: [${grid.col}, ${grid.row}] (Press Esc to clear)`;
             DOM.fileStatus.classList.replace('text--muted', 'text--accent');
         } else {
-            DOM.fileStatus.textContent = state.rawBatches && state.rawBatches.length > 0 ? 'Data Ready (Global View)' : 'Awaiting import...';
+            DOM.fileStatus.textContent =
+                state.rawBatches && state.rawBatches.length > 0
+                    ? 'Data Ready (Global View)'
+                    : 'Awaiting import...';
             DOM.fileStatus.classList.replace('text--accent', 'text--muted');
         }
     });

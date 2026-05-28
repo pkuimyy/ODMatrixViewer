@@ -1,16 +1,16 @@
 /* --- Global Color Variables (Light Theme) --- */
 :root {
-  --bg-app: #f4f4f5;         /* Light gray background */
-  --bg-sidebar: #ffffff;     /* Pure white for the sidebar */
-  --bg-panel: #e4e4e7;       /* Slightly darker gray for badges/elements */
-  
-  --text-main: #18181b;      /* Near black for primary text */
-  --text-muted: #71717a;     /* Medium gray for secondary text */
-  --text-accent: #0284c7;    /* Darker blue for contrast on light backgrounds */
-  
-  --border-color: #e4e4e7;   /* Light gray borders */
+  --bg-app: #f4f4f5; /* Light gray background */
+  --bg-sidebar: #ffffff; /* Pure white for the sidebar */
+  --bg-panel: #e4e4e7; /* Slightly darker gray for badges/elements */
+
+  --text-main: #18181b; /* Near black for primary text */
+  --text-muted: #71717a; /* Medium gray for secondary text */
+  --text-accent: #0284c7; /* Darker blue for contrast on light backgrounds */
+
+  --border-color: #e4e4e7; /* Light gray borders */
   --focus-ring: rgba(2, 132, 199, 0.4);
-  
+
   --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono: 'Fira Code', 'Courier New', monospace;
 }
@@ -27,7 +27,7 @@ body {
   background-color: var(--bg-app);
   color: var(--text-main);
   height: 100vh;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 /* --- Layout --- */
@@ -45,7 +45,7 @@ body {
   flex-direction: column;
   padding: 20px;
   overflow-y: auto;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.02); /* Slight shadow for depth */
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02); /* Slight shadow for depth */
 }
 
 .sidebar__header {
@@ -117,8 +117,13 @@ body {
   font-family: var(--font-mono);
 }
 
-.text--muted { color: var(--text-muted); }
-.text--accent { color: var(--text-accent); font-weight: bold; }
+.text--muted {
+  color: var(--text-muted);
+}
+.text--accent {
+  color: var(--text-accent);
+  font-weight: bold;
+}
 
 .slider-header {
   display: flex;
@@ -141,7 +146,7 @@ body {
   cursor: pointer;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   accent-color: var(--text-accent);
 }
 
@@ -160,7 +165,7 @@ body {
 .viewport {
   position: relative;
   background-color: #f8fafc; /* Very light slate background for the map area */
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 /* 修改原有的 .csl-map 样式 */
@@ -168,12 +173,12 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  display: none; 
+  display: none;
   /* 🚨 删除 width: 100%; 和 height: 100%; */
-  
-  transform-origin: 0 0; 
+
+  transform-origin: 0 0;
   will-change: transform;
-  pointer-events: none; 
+  pointer-events: none;
   z-index: 1;
 }
 
@@ -183,10 +188,10 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 2; 
+  z-index: 2;
   cursor: grab;
   /* 移除触摸板默认行为，防止与滚轮缩放冲突 */
-  touch-action: none; 
+  touch-action: none;
 }
 
 #heatmap-canvas:active {

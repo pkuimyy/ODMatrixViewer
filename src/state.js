@@ -3,20 +3,21 @@ const listeners = new Map();
 
 const _state = {
     timeSlice: 12,
+    showAllDay: false,
     filters: { O: true, D: true },
-    
+
     // 图层透明度控制
     mapOpacity: 60,
     heatmapOpacity: 100, // 新增：热力图图层透明度，默认 100%
-    
+
     mapImageUrl: null,
     mapDimensions: { width: 0, height: 0 },
     camera: { x: 0, y: 0, zoom: 1 },
     rawBatches: [],
 
     // 地图与网格动态配置
-    mapSizeTiles: 9, 
-    gridSize: 10,    // 🚨 变更为：以 u 为单位，默认 10u (10u = 80m)
+    mapSizeTiles: 9,
+    gridSize: 10, // 🚨 变更为：以 u 为单位，默认 10u (10u = 80m)
 
     // 🚀 新增：当前聚焦的网格坐标。null 表示全局模式
     focusedGrid: null
@@ -27,7 +28,7 @@ export const state = new Proxy(_state, {
         if (target[property] !== value) {
             target[property] = value;
             if (listeners.has(property)) {
-                listeners.get(property).forEach(callback => callback(value, target));
+                listeners.get(property).forEach((callback) => callback(value, target));
             }
         }
         return true;

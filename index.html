@@ -1,110 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ODMatrix Viewer - Native</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ODMatrix Viewer - Native</title>
-  <link rel="stylesheet" href="./src/style.css" />
-</head>
-
-<body>
-  <div class="app-container">
-    <aside class="sidebar">
-      <div class="sidebar__header">
-        <h1 class="sidebar__title">ODMatrix Viewer</h1>
-        <span class="sidebar__badge">v1.0 Vanilla</span>
-      </div>
-      <section class="sidebar__section">
-        <h2 class="section__title">Data Source</h2>
-        <div class="control-group">
-          <label class="btn btn--primary" for="file-upload">
-            Load CSV Dataset
-            <input type="file" id="file-upload" accept=".csv" style="display: none;" />
-          </label>
-          <label class="btn" style="border: 1px solid var(--border-color);" for="map-upload">
-            Import Base Map (PNG/JPG)
-            <input type="file" id="map-upload" accept="image/png, image/jpeg" style="display: none;" />
-          </label>
-
-          <div id="file-status" class="status-text text--muted">Awaiting import...</div>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar">
+        <div class="sidebar__header">
+          <h1 class="sidebar__title">ODMatrix Viewer</h1>
         </div>
-      </section>
+        <section class="sidebar__section">
+          <h2 class="section__title">Data Source</h2>
+          <div class="control-group">
+            <label class="btn btn--primary" for="file-upload">
+              Load CSV Dataset
+              <input type="file" id="file-upload" accept=".csv" style="display: none" />
+            </label>
+            <label class="btn" style="border: 1px solid var(--border-color)" for="map-upload">
+              Import Base Map (PNG/JPG)
+              <input
+                type="file"
+                id="map-upload"
+                accept="image/png, image/jpeg"
+                style="display: none"
+              />
+            </label>
 
-<section class="sidebar__section">
-        <h2 class="section__title">Layers & Opacity</h2>
-        <div class="control-group">
-          <div class="slider-header">
-            <span>Base Map Opacity</span>
-            <span id="opacity-display" class="text--accent">60%</span>
+            <div id="file-status" class="status-text text--muted">Awaiting import...</div>
           </div>
-          <input type="range" id="opacity-slider" class="slider" min="0" max="100" value="60" step="1" />
-          
-          <div class="slider-header">
-            <span>Heatmap Opacity</span>
-            <span id="heatmap-opacity-display" class="text--accent">100%</span>
+        </section>
+
+        <section class="sidebar__section">
+          <h2 class="section__title">Layers & Opacity</h2>
+          <div class="control-group">
+            <div class="slider-header">
+              <span>Base Map Opacity</span>
+              <span id="opacity-display" class="text--accent">60%</span>
+            </div>
+            <input
+              type="range"
+              id="opacity-slider"
+              class="slider"
+              min="0"
+              max="100"
+              value="60"
+              step="1"
+            />
+
+            <div class="slider-header">
+              <span>Heatmap Opacity</span>
+              <span id="heatmap-opacity-display" class="text--accent">100%</span>
+            </div>
+            <input
+              type="range"
+              id="heatmap-opacity-slider"
+              class="slider"
+              min="0"
+              max="100"
+              value="100"
+              step="1"
+            />
           </div>
-          <input type="range" id="heatmap-opacity-slider" class="slider" min="0" max="100" value="100" step="1" />
-        </div>
-      </section>
+        </section>
 
-      <section class="sidebar__section">
-        <h2 class="section__title">Grid & Map Bounds</h2>
-        <div class="control-group">
-          <div class="slider-header">
-            <span>Map Size (Tiles)</span>
+        <section class="sidebar__section">
+          <h2 class="section__title">Grid & Map Bounds</h2>
+          <div class="control-group">
+            <div class="slider-header">
+              <span>Map Size (Tiles)</span>
+            </div>
+            <select
+              id="tiles-select"
+              class="btn"
+              style="
+                width: 100%;
+                text-align: left;
+                background: var(--bg-panel);
+                color: var(--text-main);
+                border: 1px solid var(--border-color);
+                padding: 8px;
+                cursor: pointer;
+                font-family: var(--font-sans);
+              "
+            >
+              <option value="3">3 x 3 (Center Area)</option>
+              <option value="5">5 x 5 (Inner City)</option>
+              <option value="9" selected>9 x 9 (Full Map)</option>
+            </select>
+
+            <div class="slider-header">
+              <span>Grid Resolution</span>
+              <span id="grid-display" class="text--accent">10u (80m)</span>
+            </div>
+            <input
+              type="range"
+              id="grid-slider"
+              class="slider"
+              min="10"
+              max="100"
+              value="10"
+              step="10"
+            />
           </div>
-          <select id="tiles-select" class="btn" style="width: 100%; text-align: left; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-color); padding: 8px; cursor: pointer; font-family: var(--font-sans);">
-            <option value="3">3 x 3 (Center Area)</option>
-            <option value="5">5 x 5 (Inner City)</option>
-            <option value="9" selected>9 x 9 (Full Map)</option>
-          </select>
+        </section>
 
-          <div class="slider-header">
-            <span>Grid Resolution</span>
-            <span id="grid-display" class="text--accent">10u (80m)</span>
+        <section class="sidebar__section">
+          <h2 class="section__title">Time Slice</h2>
+          <div class="control-group">
+            <div class="slider-header">
+              <span>00:00</span>
+              <span id="time-display" class="text--accent">12:00</span>
+              <span>23:00</span>
+            </div>
+            <input
+              type="range"
+              id="time-slider"
+              class="slider"
+              min="0"
+              max="23"
+              value="12"
+              step="1"
+            />
+
+            <button
+              id="btn-all-day"
+              class="btn"
+              style="border: 1px solid var(--border-color); margin-top: 8px"
+            >
+              🌍 Show All Day (24h)
+            </button>
           </div>
-          <input type="range" id="grid-slider" class="slider" min="10" max="100" value="10" step="10" />
-        </div>
-      </section>
+        </section>
 
-      <section class="sidebar__section">
-        <h2 class="section__title">Time Slice</h2>
-        <div class="control-group">
-          <div class="slider-header">
-            <span>00:00</span>
-            <span id="time-display" class="text--accent">12:00</span>
-            <span>23:00</span>
+        <section class="sidebar__section">
+          <h2 class="section__title">Filters</h2>
+          <div id="filter-container" class="control-group">
+            <label class="checkbox-label">
+              <input type="checkbox" name="type" value="O" checked />
+              Origin (O)
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="type" value="D" checked />
+              Destination (D)
+            </label>
           </div>
-          <input type="range" id="time-slider" class="slider" min="0" max="23" value="12" step="1" />
-        </div>
-      </section>
+        </section>
+      </aside>
 
-      <section class="sidebar__section">
-        <h2 class="section__title">Filters</h2>
-        <div id="filter-container" class="control-group">
-          <label class="checkbox-label">
-            <input type="checkbox" name="type" value="O" checked /> Origin (O)
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" name="type" value="D" checked /> Destination (D)
-          </label>
-        </div>
-      </section>
+      <main class="viewport" id="viewport">
+        <img id="map-baselayer" class="csl-map" draggable="false" alt="" />
+        <canvas id="heatmap-canvas"></canvas>
+      </main>
+    </div>
 
-      <div class="sidebar__footer">
-        <div class="fps-counter">FPS: <span id="fps-value">60</span></div>
-        <div class="data-counter">Points: <span id="points-value">0</span></div>
-      </div>
-    </aside>
-
-    <main class="viewport" id="viewport">
-      <img id="map-baselayer" class="csl-map" draggable="false" alt="" />
-      <canvas id="heatmap-canvas"></canvas>
-    </main>
-  </div>
-
-  <script type="module" src="./src/main.js"></script>
-</body>
-
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>
