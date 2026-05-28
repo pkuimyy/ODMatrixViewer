@@ -13,10 +13,6 @@ const _state = {
 
     timeSlice: 12,
     filters: { O: true, D: true },
-    mapOpacity: 60,
-    mapImageUrl: null,
-    mapDimensions: { width: 0, height: 0 },
-    camera: { x: 0, y: 0, zoom: 1 },
 
     // 新增：存放所有 Worker 传回来的 Float32Array 批次
     rawBatches: []
