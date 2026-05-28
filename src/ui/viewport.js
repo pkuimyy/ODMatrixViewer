@@ -113,8 +113,8 @@ export function initViewport(DOM) {
         state.camera = clampCamera(newX, newY, newZoom);
     }, { passive: false });
 
-    DOM.canvas.addEventListener('click', (e) => {
-        if (Math.abs(e.clientX - lastMouseX) > 2 || Math.abs(e.clientY - lastMouseY) > 2) return;
+    // 🚨 1. 将原来的 'click' 修改为 'dblclick'
+    DOM.canvas.addEventListener('dblclick', (e) => {
         const rect = DOM.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
@@ -122,7 +122,36 @@ export function initViewport(DOM) {
 
         const worldX = (mouseX - x) / zoom;
         const worldY = (mouseY - y) / zoom;
-        console.log(`[Interaction] Clicked World Coordinates: (${worldX.toFixed(2)}, ${worldY.toFixed(2)})`);
+
+        const WORLD_SIZE = state.mapSizeTiles * 1920;
+        const GRID_RES = state.gridSize * 8;
+        const COLS = Math.ceil(WORLD_SIZE / GRID_RES);
+        const ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
+
+        const imgW = state.mapDimensions.width || WORLD_SIZE;
+        const imgH = state.mapDimensions.height || WORLD_SIZE;
+        const cellW = imgW / COLS;
+        const cellH = imgH / ROWS;
+
+        const col = Math.floor(worldX / cellW);
+        const row = Math.floor(worldY / cellH);
+
+        if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
+            if (state.focusedGrid && state.focusedGrid.col === col && state.focusedGrid.row === row) {
+                state.focusedGrid = null;
+            } else {
+                state.focusedGrid = { col, row };
+            }
+        } else {
+            state.focusedGrid = null;
+        }
+    });
+
+    // 🚨 2. 新增：全局监听键盘 Esc 键以退出聚焦模式
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && state.focusedGrid) {
+            state.focusedGrid = null;
+        }
     });
 
     // ==========================================

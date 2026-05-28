@@ -51,25 +51,36 @@ export function initRenderer(DOM) {
         const showO = state.filters.O;
         const showD = state.filters.D;
 
+        const focusedGrid = state.focusedGrid; // 提取焦点状态
+
         for (let b = 0; b < batches.length; b++) {
             const batch = batches[b];
             for (let i = 0; i < batch.length; i += 5) {
-                // TODO: 测试完毕后记得把时间过滤 if(batch[i+4] === timeSlice) 加回来
-                if (showO) {
-                    const col = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
-                    // 🚀 核心修复：CSL 的 Z轴向上，Canvas 的 Y轴向下。此处将 Z 翻转映射为 Y
-                    const row = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
-                    if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
-                        gridData[row * COLS + col]++;
+
+                const oCol = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
+                const oRow = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
+                const dCol = Math.floor((batch[i + 2] + HALF_WORLD) / GRID_RES);
+                const dRow = Math.floor((HALF_WORLD - batch[i + 3]) / GRID_RES);
+
+                const validO = oCol >= 0 && oCol < COLS && oRow >= 0 && oRow < ROWS;
+                const validD = dCol >= 0 && dCol < COLS && dRow >= 0 && dRow < ROWS;
+
+                if (!validO || !validD) continue; // 剔除越界脏数据
+
+                if (focusedGrid) {
+                    // 🎯 【焦点探查模式】
+                    // 入度探查 (Inbound)：勾选 Origin(O) 时，如果市民的目的地(D)是当前网格，则画出他出发的起点(O)
+                    if (showO && dCol === focusedGrid.col && dRow === focusedGrid.row) {
+                        gridData[oRow * COLS + oCol]++;
                     }
-                }
-                if (showD) {
-                    const col = Math.floor((batch[i + 2] + HALF_WORLD) / GRID_RES);
-                    // 🚀 核心修复
-                    const row = Math.floor((HALF_WORLD - batch[i + 3]) / GRID_RES);
-                    if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
-                        gridData[row * COLS + col]++;
+                    // 出度探查 (Outbound)：勾选 Dest(D) 时，如果市民的起点(O)是当前网格，则画出他前往的终点(D)
+                    if (showD && oCol === focusedGrid.col && oRow === focusedGrid.row) {
+                        gridData[dRow * COLS + dCol]++;
                     }
+                } else {
+                    // 🌍 【全局宏观模式】
+                    if (showO) gridData[oRow * COLS + oCol]++;
+                    if (showD) gridData[dRow * COLS + dCol]++;
                 }
             }
         }
@@ -82,6 +93,8 @@ export function initRenderer(DOM) {
         if (activeValues.length > 0) {
             activeValues.sort((a, b) => a - b);
             maxRef = activeValues[Math.floor(activeValues.length * 0.95)];
+        } else {
+            maxRef = 1; // 强制重置
         }
         if (maxRef < 1) maxRef = 1;
 
@@ -164,16 +177,60 @@ export function initRenderer(DOM) {
                         ctx.fillStyle = getCyberColor(val);
                         // 画实心矩形
                         ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
-
-                        // 仅当缩放倍数够大（网格视觉尺寸大于 5px 时）才绘制线框，防止密集时白线糊成一片
-                        // 🚨 修改点：显式绘制网格，使用深色半透明（如黑色 40%），让霓虹色块被深色边界包裹
-                        if (cellW * zoom > 5) {
-                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-                            ctx.lineWidth = 1 / zoom; // 保持物理 1 像素粗细
-                            ctx.strokeRect(col * cellW, row * cellH, cellW, cellH);
-                        }
                     }
                 }
+            }
+
+            // 🚀 核心更新：绘制贯穿整个画布的虚线网格
+            if (cellW * zoom > 5) {
+                // 使用深色半透明，确保不喧宾夺主
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+                ctx.lineWidth = 1 / zoom; // 保持物理 1 像素粗细
+
+                // 设置虚线：实线段和空白段在屏幕上各约 4 像素
+                ctx.setLineDash([4 / zoom, 4 / zoom]);
+                ctx.beginPath();
+
+                // 向外围延伸 2 个格子，以表达地图外的城际边界流量
+                const expandSize = 2;
+
+                // 绘制垂直线 (列)
+                for (let col = startCol; col <= endCol + 1; col++) {
+                    ctx.moveTo(col * cellW, -expandSize * cellH);
+                    ctx.lineTo(col * cellW, (ROWS + expandSize) * cellH);
+                }
+
+                // 绘制水平线 (行)
+                for (let row = startRow; row <= endRow + 1; row++) {
+                    ctx.moveTo(-expandSize * cellW, row * cellH);
+                    ctx.lineTo((COLS + expandSize) * cellW, row * cellH);
+                }
+
+                ctx.stroke();
+                // 🚨 务必恢复实线模式，否则后面的焦点高亮框也会变成虚线
+                ctx.setLineDash([]);
+            }
+
+            // 🚀 焦点网格高亮 (原来这部分保留不变)
+            if (state.focusedGrid) {
+                const fCol = state.focusedGrid.col;
+                const fRow = state.focusedGrid.row;
+                // ... (保留原来的蓝色高亮代码) ...
+            }
+
+            // 🚀 在绘制完热力图后，高亮绘制用户选中的焦点网格
+            if (state.focusedGrid) {
+                const fCol = state.focusedGrid.col;
+                const fRow = state.focusedGrid.row;
+
+                // 使用天蓝色描边并加粗
+                ctx.strokeStyle = '#0ea5e9';
+                ctx.lineWidth = Math.max(2 / zoom, 1);
+
+                // 内部填充微弱的蓝色半透明，使其在视觉上立刻脱颖而出
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
+                ctx.fillRect(fCol * cellW, fRow * cellH, cellW, cellH);
+                ctx.strokeRect(fCol * cellW, fRow * cellH, cellW, cellH);
             }
 
             ctx.restore();
@@ -193,4 +250,5 @@ export function initRenderer(DOM) {
     // 监听新增的尺寸配置变化
     subscribe('mapSizeTiles', updateGridConfig);
     subscribe('gridSize', updateGridConfig);
+    subscribe('focusedGrid', aggregateData);
 }

@@ -17,6 +17,9 @@ const _state = {
     // 地图与网格动态配置
     mapSizeTiles: 9, 
     gridSize: 10,    // 🚨 变更为：以 u 为单位，默认 10u (10u = 80m)
+
+    // 🚀 新增：当前聚焦的网格坐标。null 表示全局模式
+    focusedGrid: null
 };
 
 export const state = new Proxy(_state, {

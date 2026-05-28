@@ -74,4 +74,15 @@ export function initSidebar(DOM) {
     subscribe('timeSlice', (newTime) => {
         DOM.timeDisplay.textContent = `${newTime.toString().padStart(2, '0')}:00`;
     });
+
+    subscribe('focusedGrid', (grid) => {
+        if (grid) {
+            // 🚨 更新提示文案
+            DOM.fileStatus.textContent = `📍 Focused: [${grid.col}, ${grid.row}] (Press Esc to clear)`;
+            DOM.fileStatus.classList.replace('text--muted', 'text--accent');
+        } else {
+            DOM.fileStatus.textContent = state.rawBatches && state.rawBatches.length > 0 ? 'Data Ready (Global View)' : 'Awaiting import...';
+            DOM.fileStatus.classList.replace('text--accent', 'text--muted');
+        }
+    });
 }
