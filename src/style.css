@@ -1,0 +1,194 @@
+/* --- Global Color Variables (Light Theme) --- */
+:root {
+  --bg-app: #f4f4f5;         /* Light gray background */
+  --bg-sidebar: #ffffff;     /* Pure white for the sidebar */
+  --bg-panel: #e4e4e7;       /* Slightly darker gray for badges/elements */
+  
+  --text-main: #18181b;      /* Near black for primary text */
+  --text-muted: #71717a;     /* Medium gray for secondary text */
+  --text-accent: #0284c7;    /* Darker blue for contrast on light backgrounds */
+  
+  --border-color: #e4e4e7;   /* Light gray borders */
+  --focus-ring: rgba(2, 132, 199, 0.4);
+  
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', 'Courier New', monospace;
+}
+
+/* --- Reset & Base Settings --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden; 
+}
+
+/* --- Layout --- */
+.app-container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: 100vh;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.02); /* Slight shadow for depth */
+}
+
+.sidebar__header {
+  margin-bottom: 30px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sidebar__title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.sidebar__badge {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  background: var(--bg-panel);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-main); /* Darkened text on the badge */
+}
+
+.sidebar__section {
+  margin-bottom: 24px;
+}
+
+.section__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+/* --- Controls --- */
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn--primary {
+  background-color: var(--text-accent);
+  color: #ffffff;
+}
+
+.btn--primary:hover {
+  background-color: #0369a1; /* Even darker blue on hover */
+}
+
+.status-text {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+
+.text--muted { color: var(--text-muted); }
+.text--accent { color: var(--text-accent); font-weight: bold; }
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+
+.slider {
+  width: 100%;
+  cursor: pointer;
+  accent-color: var(--text-accent); /* Modern CSS feature for native sliders */
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: var(--text-accent);
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* --- Viewport --- */
+.viewport {
+  position: relative;
+  background-color: #f8fafc; /* Very light slate background for the map area */
+  overflow: hidden; 
+}
+
+/* 修改原有的 .csl-map 样式 */
+.csl-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none; 
+  /* 🚨 删除 width: 100%; 和 height: 100%; */
+  
+  transform-origin: 0 0; 
+  will-change: transform;
+  pointer-events: none; 
+  z-index: 1;
+}
+
+#heatmap-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2; 
+  cursor: grab;
+  /* 移除触摸板默认行为，防止与滚轮缩放冲突 */
+  touch-action: none; 
+}
+
+#heatmap-canvas:active {
+  cursor: grabbing;
+}

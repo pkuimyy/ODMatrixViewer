@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ODMatrix Viewer - Native</title>
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar__header">
+        <h1 class="sidebar__title">ODMatrix Viewer</h1>
+        <span class="sidebar__badge">v1.0 Vanilla</span>
+      </div>
+      <section class="sidebar__section">
+        <h2 class="section__title">Data Source</h2>
+        <div class="control-group">
+          <label class="btn btn--primary" for="file-upload">
+            Load CSV Dataset
+            <input type="file" id="file-upload" accept=".csv" style="display: none;" />
+          </label>
+          <label class="btn" style="border: 1px solid var(--border-color);" for="map-upload">
+            Import Base Map (PNG/JPG)
+            <input type="file" id="map-upload" accept="image/png, image/jpeg" style="display: none;" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sidebar__section">
+        <h2 class="section__title">Map Settings</h2>
+        <div class="control-group">
+          <div class="slider-header">
+            <span>Opacity</span>
+            <span id="opacity-display" class="text--accent">60%</span>
+          </div>
+          <input type="range" id="opacity-slider" class="slider" min="0" max="100" value="60" step="1" />
+        </div>
+      </section>
+
+      <section class="sidebar__section">
+        <h2 class="section__title">Time Slice</h2>
+        <div class="control-group">
+          <div class="slider-header">
+            <span>00:00</span>
+            <span id="time-display" class="text--accent">12:00</span>
+            <span>23:00</span>
+          </div>
+          <input type="range" id="time-slider" class="slider" min="0" max="23" value="12" step="1" />
+        </div>
+      </section>
+
+      <section class="sidebar__section">
+        <h2 class="section__title">Filters</h2>
+        <div id="filter-container" class="control-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="type" value="O" checked /> Origin (O)
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="type" value="D" checked /> Destination (D)
+          </label>
+        </div>
+      </section>
+
+      <div class="sidebar__footer">
+        <div class="fps-counter">FPS: <span id="fps-value">60</span></div>
+        <div class="data-counter">Points: <span id="points-value">0</span></div>
+      </div>
+    </aside>
+
+    <main class="viewport" id="viewport">
+      <img id="map-baselayer" class="csl-map" draggable="false" alt="" />
+      <canvas id="heatmap-canvas"></canvas>
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>
