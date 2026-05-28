@@ -51,26 +51,27 @@ export function initRenderer(DOM) {
             ctx.translate(x, y);
             ctx.scale(zoom, zoom);
 
+            // 🚨 修复核心：计算反向缩放尺寸
+            // 无论 zoom 怎么变，我们希望点在屏幕上至少有 1.5 到 2 个像素的大小
+            const pointSize = Math.max(1.5 / zoom, 0.5);
+
             // 3. 遍历数据并绘制
-            // 我们的数据结构是：[Ox, Oy, Dx, Dy, Hour] (5个为一组)
             for (let b = 0; b < batches.length; b++) {
                 const batch = batches[b];
 
                 for (let i = 0; i < batch.length; i += 5) {
-                    // 过滤时间切片 (batch[i+4] 是 Hour)
                     if (batch[i + 4] === timeSlice) {
 
-                        // 绘制起点 (Origin) - 亮蓝色
                         if (showO) {
-                            ctx.fillStyle = 'rgba(14, 165, 233, 0.6)';
-                            // 参数: X, Y, 宽, 高 (在世界坐标系下，这里画一个 2x2 单位的方块)
-                            ctx.fillRect(batch[i], batch[i + 1], 2, 2);
+                            ctx.fillStyle = 'rgba(14, 165, 233, 0.8)';
+                            // 🚨 使用计算好的 pointSize，而不是写死的 2
+                            ctx.fillRect(batch[i], batch[i + 1], pointSize, pointSize);
                         }
 
-                        // 绘制终点 (Destination) - 亮橙色
                         if (showD) {
-                            ctx.fillStyle = 'rgba(249, 115, 22, 0.6)';
-                            ctx.fillRect(batch[i + 2], batch[i + 3], 2, 2);
+                            ctx.fillStyle = 'rgba(249, 115, 22, 0.8)';
+                            // 🚨 使用计算好的 pointSize
+                            ctx.fillRect(batch[i + 2], batch[i + 3], pointSize, pointSize);
                         }
                     }
                 }
