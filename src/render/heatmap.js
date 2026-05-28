@@ -112,25 +112,39 @@ export function initRenderer(DOM) {
     }
 
     function getCyberColor(value) {
+        // 1. 对数映射计算比例 (保留你原有的优秀防抖逻辑)
         const safeMaxRef = Math.max(maxRef, 1);
         let ratio = Math.log(value + 1) / Math.log(safeMaxRef + 1);
         if (isNaN(ratio) || !isFinite(ratio)) ratio = 0;
         ratio = Math.min(Math.max(ratio, 0), 1);
 
-        const a = Math.min(0.2 + ratio * 0.7, 0.85);
+        // 2. 透明度控制：低值透明度高，高值逐渐不透明
+        // 保证最低也有 0.15 的透明度，最高达到 0.9（保留一点点透气感）
+        const a = Math.min(0.15 + ratio * 0.75, 0.90);
+
         let r, g, b;
 
-        if (ratio < 0.5) {
-            const t = ratio / 0.5;
-            r = Math.floor(t * 180);
-            g = Math.floor(50 + t * 50);
-            b = 255;
+        // 3. 反向黑体辐射色彩插值 (Light -> Dark)
+        if (ratio < 0.33) {
+            // 阶段 1：浅黄 -> 亮橙 (过渡平缓，用于大面积低流量)
+            const t = ratio / 0.33;
+            r = 255;
+            g = Math.floor(255 - t * 105); // 255 -> 150
+            b = Math.floor(200 - t * 200); // 200 -> 0
+        } else if (ratio < 0.66) {
+            // 阶段 2：亮橙 -> 深红 (视觉焦点开始形成)
+            const t = (ratio - 0.33) / 0.33;
+            r = Math.floor(255 - t * 75);  // 255 -> 180
+            g = Math.floor(150 - t * 150); // 150 -> 0
+            b = 0;
         } else {
-            const t = (ratio - 0.5) / 0.5;
-            r = Math.floor(180 + t * 75);
-            g = Math.floor(100 + t * 155);
-            b = Math.floor(255 - t * 255);
+            // 阶段 3：深红 -> 暗紫/黑 (极高流量的绝对核心)
+            const t = (ratio - 0.66) / 0.34;
+            r = Math.floor(180 - t * 160); // 180 -> 20
+            g = 0;                         // 0 -> 0
+            b = Math.floor(t * 50);        // 0 -> 50 (加入一点蓝调，形成暗紫，比纯黑更有质感)
         }
+
         return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
     }
 
