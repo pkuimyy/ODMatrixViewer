@@ -18,7 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 🚨 修复：补回漏掉的时间和过滤器 DOM 节点
         timeSlider: document.getElementById('time-slider'),
         timeDisplay: document.getElementById('time-display'),
-        filterContainer: document.getElementById('filter-container')
+        filterContainer: document.getElementById('filter-container'),
+        // 在 DOM 对象中补充：
+        reasonFilterContainer: document.getElementById('reason-filter-container')
     };
 
     // 2. 初始化各个子模块

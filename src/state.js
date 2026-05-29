@@ -4,7 +4,7 @@ const listeners = new Map();
 const _state = {
     timeSlice: 12,
     showAllDay: false,
-    filters: { O: true, D: true },
+    filters: { O: true, D: true, reasons: { 0: true, 1: true, 2: true, 3: true } },
 
     // 图层透明度控制
     mapOpacity: 60,
@@ -22,7 +22,7 @@ const _state = {
     // 🚀 新增：区域框选与悬停控制状态
     focusedArea: null, // 已锁定的框选区域 { startCol, startRow, endCol, endRow }
     currentSelection: null, // 正在拖拽中的临时区域 { startCol, startRow, endCol, endRow }
-    hoveredGrid: null // 当前鼠标悬停的网格坐标 { col, row }
+    hoveredGrid: null, // 当前鼠标悬停的网格坐标 { col, row }
 };
 
 export const state = new Proxy(_state, {

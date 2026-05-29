@@ -1,35 +1,41 @@
 // src/render/color-utils.js
 
+const REASON_COLORS = [
+    [2, 132, 199], // 0: Work (Sky Blue)
+    [22, 163, 74], // 1: Home (Green)
+    [234, 88, 12], // 2: Leisure (Orange)
+    [147, 51, 234] // 3: Other (Purple)
+];
+
 /**
- * 根据网格的计数值和最大参考值计算赛博风格的渐变颜色
- * @param {number} value - 当前网格的聚合计数值
- * @param {number} maxRef - 95% 分位数最大参考值
- * @returns {string} rgba 颜色字符串
+ * 在灰白底图环境下：决定当前网格格子的混合色彩。
+ * - Hue: 由当前格子数量占比最高的目的决定 (Dominant Component)
+ * - Depth/Alpha: 依据 4 种目的的总热力值计算透明度 (值越大越不透明)
  */
-export function getCyberColor(value, maxRef) {
+export function getReasonColor(counts, maxRef) {
+    let sum = 0;
+    let maxC = -1;
+    let dominantId = 0;
+
+    for (let i = 0; i < 4; i++) {
+        const c = counts[i];
+        sum += c;
+        if (c > maxC) {
+            maxC = c;
+            dominantId = i;
+        }
+    }
+
+    if (sum === 0) return null;
+
+    const [r, g, b] = REASON_COLORS[dominantId];
+
     const safeMaxRef = Math.max(maxRef, 1);
-    let ratio = Math.log(value + 1) / Math.log(safeMaxRef + 1);
-    if (isNaN(ratio) || !isFinite(ratio)) ratio = 0;
+    let ratio = Math.log(sum + 1) / Math.log(safeMaxRef + 1);
     ratio = Math.min(Math.max(ratio, 0), 1);
 
-    const a = Math.min(0.15 + ratio * 0.75, 0.9);
-    let r, g, b;
+    // Alpha 深度映射：最低保持 15% 透明度防止看不清，最大 95% (近似实心)
+    const a = Math.min(0.15 + ratio * 0.8, 0.95);
 
-    if (ratio < 0.33) {
-        const t = ratio / 0.33;
-        r = 255;
-        g = Math.floor(255 - t * 105);
-        b = Math.floor(200 - t * 200);
-    } else if (ratio < 0.66) {
-        const t = (ratio - 0.33) / 0.33;
-        r = Math.floor(255 - t * 75);
-        g = Math.floor(150 - t * 150);
-        b = 0;
-    } else {
-        const t = (ratio - 0.66) / 0.34;
-        r = Math.floor(180 - t * 160);
-        g = 0;
-        b = Math.floor(t * 50);
-    }
     return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
 }
