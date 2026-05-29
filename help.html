@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Help - ODMatrix Viewer</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <style>
+      body {
+        overflow-y: auto;
+      }
+
+      .help-main {
+        padding: 32px 20px 48px;
+      }
+
+      .help-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+      }
+
+      .help-hero,
+      .help-card {
+        background: var(--bg-sidebar);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+
+      .help-hero {
+        padding: 28px;
+      }
+
+      .help-card {
+        padding: 22px;
+      }
+
+      .help-title {
+        font-size: 1.8rem;
+        color: var(--text-accent);
+        margin-bottom: 10px;
+      }
+
+      .help-subtitle {
+        max-width: 760px;
+        line-height: 1.7;
+        color: var(--text-muted);
+      }
+
+      .help-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+      }
+
+      .help-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+
+      .help-card h2 {
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .help-card h3 {
+        font-size: 0.98rem;
+        margin: 18px 0 10px;
+        color: var(--text-main);
+      }
+
+      .help-card p,
+      .help-card li {
+        line-height: 1.7;
+      }
+
+      .help-card ul,
+      .help-card ol {
+        padding-left: 20px;
+      }
+
+      .help-card code {
+        font-family: var(--font-mono);
+        background: var(--bg-panel);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+
+      .help-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 0.92rem;
+      }
+
+      .help-table th,
+      .help-table td {
+        border: 1px solid var(--border-color);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .help-table th {
+        background: var(--bg-app);
+      }
+
+      .callout {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-left: 4px solid var(--text-accent);
+        background: rgba(2, 132, 199, 0.08);
+        border-radius: 6px;
+      }
+
+      @media (max-width: 768px) {
+        .help-main {
+          padding: 20px 14px 32px;
+        }
+
+        .help-hero,
+        .help-card {
+          padding: 18px;
+        }
+
+        .help-title {
+          font-size: 1.4rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1 class="app-title">ODMatrix Viewer</h1>
+      <nav class="app-nav">
+        <a href="/index.html" class="nav-link">🗺 Back to Viewer</a>
+        <a href="/settings.html" class="nav-link">⚙️ Advanced Settings</a>
+      </nav>
+    </header>
+
+    <main class="help-main">
+      <div class="help-container">
+        <section class="help-hero">
+          <div class="sidebar__badge">HELP CENTER</div>
+          <h2 class="help-title">ODMatrix Viewer 使用说明</h2>
+          <p class="help-subtitle">
+            这个页面汇总了导入数据、交互操作、CSV 格式要求与常见问题。内容基于当前项目实现编写，可直接作为项目内置帮助页使用。
+          </p>
+          <div class="help-actions">
+            <a href="/index.html" class="btn btn--primary" style="text-decoration: none"
+              >打开主视图</a
+            >
+            <a
+              href="/settings.html"
+              class="btn"
+              style="border: 1px solid var(--border-color); text-decoration: none"
+              >编辑分类配置</a
+            >
+          </div>
+        </section>
+
+        <div class="help-grid">
+          <section class="help-card">
+            <h2>快速开始</h2>
+            <ol>
+              <li>点击 <code>Load CSV Dataset</code> 导入 OD 数据文件。</li>
+              <li>如需空间背景，点击 <code>Import Base Map (PNG/JPG)</code> 导入底图。</li>
+              <li>使用左侧面板调整时间、网格精度、地图范围与图层透明度。</li>
+              <li>使用右侧面板切换 O / D 图层和出行原因分类。</li>
+            </ol>
+            <div class="callout">
+              建议先完成 CSV 导入，再调整网格与筛选参数，这样更容易观察不同配置下的聚合结果。
+            </div>
+          </section>
+
+          <section class="help-card">
+            <h2>交互操作</h2>
+            <ul>
+              <li>鼠标滚轮：缩放视图。</li>
+              <li>左键拖拽：平移地图与热力图。</li>
+              <li>双击网格：锁定单个聚焦格，查看与该格相关的流动分布。</li>
+              <li><code>Shift + 左键拖拽</code>：框选一个区域，查看与该区域相关的整体流动。</li>
+              <li><code>Esc</code>：清除单格或区域聚焦。</li>
+            </ul>
+          </section>
+
+          <section class="help-card">
+            <h2>面板说明</h2>
+            <h3>左侧面板</h3>
+            <ul>
+              <li><code>Base Map Opacity</code>：控制底图透明度。</li>
+              <li><code>Heatmap Opacity</code>：控制热力图透明度。</li>
+              <li><code>Map Size (Tiles)</code>：设置参与分析的地图范围。</li>
+              <li><code>Grid Resolution</code>：设置网格粒度，当前换算约为 <code>1u = 8m</code>。</li>
+              <li><code>Time Slice</code>：按小时查看数据。</li>
+              <li><code>Show All Day (24h)</code>：切换为全天聚合模式。</li>
+            </ul>
+            <h3>右侧面板</h3>
+            <ul>
+              <li><code>Origin (O)</code> 与 <code>Destination (D)</code> 可独立开关。</li>
+              <li>出行原因分类可多选，用于筛除不关心的类别。</li>
+            </ul>
+          </section>
+
+          <section class="help-card">
+            <h2>CSV 格式</h2>
+            <p>解析器会跳过首行表头，并按固定列位读取关键字段。</p>
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>列索引</th>
+                  <th>用途</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>时间值，预期为 <code>0.0 ~ 1.0</code>，会换算到 <code>0 ~ 23</code> 小时</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>出行原因原始值</td>
+                </tr>
+                <tr>
+                  <td>5</td>
+                  <td>Origin X</td>
+                </tr>
+                <tr>
+                  <td>6</td>
+                  <td>Origin Y / Z</td>
+                </tr>
+                <tr>
+                  <td>7</td>
+                  <td>Destination X</td>
+                </tr>
+                <tr>
+                  <td>8</td>
+                  <td>Destination Y / Z</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="callout">
+              当前 CSV 解析是轻量实现，采用简单的逗号分割，不支持复杂引号转义或字段内嵌逗号。
+            </div>
+          </section>
+
+          <section class="help-card">
+            <h2>高级配置</h2>
+            <p>
+              进入 <code>Advanced Settings</code> 页面后，可以编辑出行原因映射 JSON。默认配置来自项目内置文件，用户保存后的结果会写入浏览器本地存储。
+            </p>
+            <ul>
+              <li>修改只影响当前浏览器环境。</li>
+              <li>恢复默认会清空本地覆盖配置。</li>
+              <li>颜色和分类数量都会随着 JSON 配置动态变化。</li>
+            </ul>
+          </section>
+
+          <section class="help-card">
+            <h2>常见问题</h2>
+            <h3>为什么导入后没有显示颜色？</h3>
+            <p>通常是因为坐标超出当前地图范围、筛选条件全部关闭，或当前小时切片没有命中任何记录。</p>
+
+            <h3>为什么全天模式下时间滑块不可用？</h3>
+            <p>这是预期行为。启用全天模式后会聚合全部 24 小时数据，因此单小时滑块会被禁用。</p>
+
+            <h3>为什么设置页改了分类但别的浏览器没变化？</h3>
+            <p>因为配置保存在当前浏览器的 LocalStorage，不会自动同步到其他浏览器或仓库文件。</p>
+          </section>
+
+          <section class="help-card">
+            <h2>已知限制</h2>
+            <ul>
+              <li>这是纯前端工具，没有后端存储、登录或协作能力。</li>
+              <li>空间坐标使用项目内部世界坐标，不是 GIS 经纬度。</li>
+              <li>底图只支持手动导入图片，不包含自动地理配准。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="status-text text--muted">Documentation page for ODMatrix Viewer</div>
+      <div class="copyright">MIT Licensed</div>
+    </footer>
+  </body>
+</html>
