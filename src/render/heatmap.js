@@ -241,10 +241,13 @@ export function initRenderer(DOM) {
                 const sY = startRow * cellH;
                 const sW = (endCol - startCol + 1) * cellW;
                 const sH = (endRow - startRow + 1) * cellH;
-                ctx.strokeStyle = '#f59e0b';
+
+                // 🎨 统一修改为蓝色：
+                ctx.strokeStyle = '#0ea5e9';
                 ctx.lineWidth = Math.max(2 / zoom, 1);
                 ctx.setLineDash([6 / zoom, 4 / zoom]);
-                ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.15)';
+
                 ctx.fillRect(sX, sY, sW, sH);
                 ctx.strokeRect(sX, sY, sW, sH);
                 ctx.setLineDash([]);
@@ -256,9 +259,12 @@ export function initRenderer(DOM) {
                 const aY = startRow * cellH;
                 const aW = (endCol - startCol + 1) * cellW;
                 const aH = (endRow - startRow + 1) * cellH;
-                ctx.strokeStyle = '#10b981';
+
+                // 🎨 统一修改为蓝色：
+                ctx.strokeStyle = '#0ea5e9';
                 ctx.lineWidth = Math.max(2.5 / zoom, 1.5);
-                ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
+
                 ctx.fillRect(aX, aY, aW, aH);
                 ctx.strokeRect(aX, aY, aW, aH);
             }
