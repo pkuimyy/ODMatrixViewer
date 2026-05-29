@@ -1,14 +1,7 @@
 // src/render/heatmap.js
 import { state, subscribe } from '../state.js';
-
-let WORLD_SIZE = 17280;
-let HALF_WORLD = WORLD_SIZE / 2;
-let GRID_RES = 80;
-let COLS = Math.ceil(WORLD_SIZE / GRID_RES);
-let ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
-
-let gridData = new Int32Array(COLS * ROWS);
-let maxRef = 1;
+import { getCyberColor } from './color-utils.js';
+import { gridContext, updateGridConfig, aggregateData } from './aggregator.js';
 
 export function initRenderer(DOM) {
     const canvas = DOM.canvas;
@@ -25,127 +18,25 @@ export function initRenderer(DOM) {
         render();
     }
 
-    function updateGridConfig() {
-        WORLD_SIZE = state.mapSizeTiles * 1920;
-        HALF_WORLD = WORLD_SIZE / 2;
-        GRID_RES = state.gridSize * 8;
-        COLS = Math.ceil(WORLD_SIZE / GRID_RES);
-        ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
-
-        gridData = new Int32Array(COLS * ROWS);
-        console.log(`[Renderer] Grid Updated: ${COLS}x${ROWS}, Cell Size: ${state.gridSize}u`);
+    function handleDataUpdate() {
         aggregateData();
-    }
 
-    function aggregateData() {
-        gridData.fill(0);
-        const batches = state.rawBatches;
-
-        // 🚨 修复逻辑：如果有数据才执行聚合，但千万不能提早 return 结束函数！
-        if (batches && batches.length > 0) {
-            const timeSlice = state.timeSlice;
-            const showAllDay = state.showAllDay;
-            const showO = state.filters.O;
-            const showD = state.filters.D;
-            const focusedGrid = state.focusedGrid;
-            const focusedArea = state.focusedArea;
-
-            const inArea = (c, r, area) => {
-                return (
-                    c >= area.startCol && c <= area.endCol && r >= area.startRow && r <= area.endRow
-                );
-            };
-
-            for (let b = 0; b < batches.length; b++) {
-                const batch = batches[b];
-                for (let i = 0; i < batch.length; i += 5) {
-                    const recordHour = batch[i + 4];
-                    if (!showAllDay && recordHour !== timeSlice) continue;
-
-                    const oCol = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
-                    const oRow = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
-                    const dCol = Math.floor((batch[i + 2] + HALF_WORLD) / GRID_RES);
-                    const dRow = Math.floor((HALF_WORLD - batch[i + 3]) / GRID_RES);
-
-                    const validO = oCol >= 0 && oCol < COLS && oRow >= 0 && oRow < ROWS;
-                    const validD = dCol >= 0 && dCol < COLS && dRow >= 0 && dRow < ROWS;
-
-                    if (!validO || !validD) continue;
-
-                    if (focusedGrid) {
-                        if (showO && dCol === focusedGrid.col && dRow === focusedGrid.row)
-                            gridData[oRow * COLS + oCol]++;
-                        if (showD && oCol === focusedGrid.col && oRow === focusedGrid.row)
-                            gridData[dRow * COLS + dCol]++;
-                    } else if (focusedArea) {
-                        if (showO && inArea(dCol, dRow, focusedArea))
-                            gridData[oRow * COLS + oCol]++;
-                        if (showD && inArea(oCol, oRow, focusedArea))
-                            gridData[dRow * COLS + dCol]++;
-                    } else {
-                        if (showO) gridData[oRow * COLS + oCol]++;
-                        if (showD) gridData[dRow * COLS + dCol]++;
-                    }
-                }
-            }
-
-            const activeValues = [];
-            for (let i = 0; i < gridData.length; i++) {
-                if (gridData[i] > 0) activeValues.push(gridData[i]);
-            }
-
-            if (activeValues.length > 0) {
-                activeValues.sort((a, b) => a - b);
-                maxRef = activeValues[Math.floor(activeValues.length * 0.95)];
-            } else {
-                maxRef = 1;
-            }
-        } else {
-            maxRef = 1; // 无数据时的默认值
-        }
-
-        if (maxRef < 1) maxRef = 1;
-
-        // 🚨 无论有没有数据，只要是初始状态，就自适应画布，确保网格能完整显示在屏幕上！
+        // 初始状态下且无底图时，热力图自适应居中缩放全景
         if (state.camera.zoom === 1 && state.mapDimensions.width === 0) {
             const rect = canvas.getBoundingClientRect();
-            const fitZoom = Math.min(rect.width / WORLD_SIZE, rect.height / WORLD_SIZE) * 0.9;
+            const fitZoom =
+                Math.min(
+                    rect.width / gridContext.WORLD_SIZE,
+                    rect.height / gridContext.WORLD_SIZE
+                ) * 0.9;
             state.camera = {
-                x: (rect.width - WORLD_SIZE * fitZoom) / 2,
-                y: (rect.height - WORLD_SIZE * fitZoom) / 2,
+                x: (rect.width - gridContext.WORLD_SIZE * fitZoom) / 2,
+                y: (rect.height - gridContext.WORLD_SIZE * fitZoom) / 2,
                 zoom: fitZoom
             };
         }
 
-        render(); // 保证绘图函数一定会被调用
-    }
-
-    function getCyberColor(value) {
-        const safeMaxRef = Math.max(maxRef, 1);
-        let ratio = Math.log(value + 1) / Math.log(safeMaxRef + 1);
-        if (isNaN(ratio) || !isFinite(ratio)) ratio = 0;
-        ratio = Math.min(Math.max(ratio, 0), 1);
-
-        const a = Math.min(0.15 + ratio * 0.75, 0.9);
-        let r, g, b;
-
-        if (ratio < 0.33) {
-            const t = ratio / 0.33;
-            r = 255;
-            g = Math.floor(255 - t * 105);
-            b = Math.floor(200 - t * 200);
-        } else if (ratio < 0.66) {
-            const t = (ratio - 0.33) / 0.33;
-            r = Math.floor(255 - t * 75);
-            g = Math.floor(150 - t * 150);
-            b = 0;
-        } else {
-            const t = (ratio - 0.66) / 0.34;
-            r = Math.floor(180 - t * 160);
-            g = 0;
-            b = Math.floor(t * 50);
-        }
-        return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
+        render();
     }
 
     let renderFrameId = null;
@@ -156,6 +47,8 @@ export function initRenderer(DOM) {
         renderFrameId = requestAnimationFrame(() => {
             const { width: cvsW, height: cvsH } = canvas.getBoundingClientRect();
             ctx.clearRect(0, 0, cvsW, cvsH);
+
+            const { COLS, ROWS, WORLD_SIZE, gridData, maxRef } = gridContext;
 
             const imgW = state.mapDimensions.width || WORLD_SIZE;
             const imgH = state.mapDimensions.height || WORLD_SIZE;
@@ -183,21 +76,24 @@ export function initRenderer(DOM) {
             const screenRight = screenLeft + cvsW * invZoom;
             const screenBottom = screenTop + cvsH * invZoom;
 
+            // 视口裁剪裁剪裁剪优化 (Frustum Culling)
             const startCol = Math.max(0, Math.floor(screenLeft / cellW));
             const endCol = Math.min(COLS - 1, Math.ceil(screenRight / cellW));
             const startRow = Math.max(0, Math.floor(screenTop / cellH));
             const endRow = Math.min(ROWS - 1, Math.ceil(screenBottom / cellH));
 
+            // 1. 绘制热力图网格数据
             for (let row = startRow; row <= endRow; row++) {
                 for (let col = startCol; col <= endCol; col++) {
                     const val = gridData[row * COLS + col];
                     if (val > 0) {
-                        ctx.fillStyle = getCyberColor(val);
+                        ctx.fillStyle = getCyberColor(val, maxRef);
                         ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
                     }
                 }
             }
 
+            // 2. 绘制自适应虚网格线
             if (cellW * zoom > 5) {
                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
                 ctx.lineWidth = 1 / zoom;
@@ -217,6 +113,7 @@ export function initRenderer(DOM) {
                 ctx.setLineDash([]);
             }
 
+            // 3. 绘制鼠标悬停框
             if (state.hoveredGrid) {
                 const hCol = state.hoveredGrid.col;
                 const hRow = state.hoveredGrid.row;
@@ -225,6 +122,7 @@ export function initRenderer(DOM) {
                 ctx.strokeRect(hCol * cellW, hRow * cellH, cellW, cellH);
             }
 
+            // 4. 绘制双击固定的单个聚焦网格
             if (state.focusedGrid) {
                 const fCol = state.focusedGrid.col;
                 const fRow = state.focusedGrid.row;
@@ -235,6 +133,7 @@ export function initRenderer(DOM) {
                 ctx.strokeRect(fCol * cellW, fRow * cellH, cellW, cellH);
             }
 
+            // 5. 绘制正在进行拖拽选择的临时框选区
             if (state.currentSelection) {
                 const { startCol, startRow, endCol, endRow } = state.currentSelection;
                 const sX = startCol * cellW;
@@ -242,7 +141,6 @@ export function initRenderer(DOM) {
                 const sW = (endCol - startCol + 1) * cellW;
                 const sH = (endRow - startRow + 1) * cellH;
 
-                // 🎨 统一修改为蓝色：
                 ctx.strokeStyle = '#0ea5e9';
                 ctx.lineWidth = Math.max(2 / zoom, 1);
                 ctx.setLineDash([6 / zoom, 4 / zoom]);
@@ -253,6 +151,7 @@ export function initRenderer(DOM) {
                 ctx.setLineDash([]);
             }
 
+            // 6. 绘制已被锁定的聚焦过滤区域
             if (state.focusedArea) {
                 const { startCol, startRow, endCol, endRow } = state.focusedArea;
                 const aX = startCol * cellW;
@@ -260,7 +159,6 @@ export function initRenderer(DOM) {
                 const aW = (endCol - startCol + 1) * cellW;
                 const aH = (endRow - startRow + 1) * cellH;
 
-                // 🎨 统一修改为蓝色：
                 ctx.strokeStyle = '#0ea5e9';
                 ctx.lineWidth = Math.max(2.5 / zoom, 1.5);
                 ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
@@ -277,19 +175,31 @@ export function initRenderer(DOM) {
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    // 状态变动事件单向数据流订阅
     subscribe('camera', render);
-    subscribe('timeSlice', aggregateData);
-    subscribe('filters', aggregateData);
-    subscribe('rawBatches', aggregateData);
-    subscribe('mapDimensions', aggregateData);
-    subscribe('mapSizeTiles', updateGridConfig);
-    subscribe('gridSize', updateGridConfig);
-    subscribe('focusedGrid', aggregateData);
-    subscribe('focusedArea', aggregateData);
     subscribe('hoveredGrid', render);
     subscribe('currentSelection', render);
-    subscribe('showAllDay', aggregateData);
 
-    // 🚀 在所有的订阅绑定完毕后，执行首次主动更新
+    [
+        'timeSlice',
+        'filters',
+        'rawBatches',
+        'mapDimensions',
+        'focusedGrid',
+        'focusedArea',
+        'showAllDay'
+    ].forEach((prop) => {
+        subscribe(prop, handleDataUpdate);
+    });
+
+    subscribe('mapSizeTiles', () => {
+        updateGridConfig();
+        handleDataUpdate();
+    });
+    subscribe('gridSize', () => {
+        updateGridConfig();
+        handleDataUpdate();
+    });
+
     updateGridConfig();
 }
