@@ -10,12 +10,6 @@ export function initSidebar(DOM) {
     const domGridDisplay = document.getElementById('grid-display');
     const domBtnAllDay = document.getElementById('btn-all-day');
 
-    const domBtnOpenConfig = document.getElementById('btn-open-config');
-    const domConfigModal = document.getElementById('config-modal');
-    const domConfigInput = document.getElementById('config-json-input');
-    const domBtnCloseConfig = document.getElementById('btn-close-config');
-    const domBtnSaveConfig = document.getElementById('btn-save-config');
-
     // 1. 动态生成 Checkbox 列表的方法
     function renderReasonCheckboxes() {
         DOM.reasonFilterContainer.innerHTML = ''; // 清空
@@ -37,41 +31,6 @@ export function initSidebar(DOM) {
 
     // 初始化渲染
     renderReasonCheckboxes();
-
-    // 2. 模态框交互逻辑
-    domBtnOpenConfig.addEventListener('click', () => {
-        // 格式化输出当前配置到 textarea
-        domConfigInput.value = JSON.stringify(state.reasonConfig, null, 2);
-        domConfigModal.style.display = 'flex';
-    });
-
-    domBtnCloseConfig.addEventListener('click', () => {
-        domConfigModal.style.display = 'none';
-    });
-
-    domBtnSaveConfig.addEventListener('click', () => {
-        try {
-            const newConfig = JSON.parse(domConfigInput.value);
-            if (!Array.isArray(newConfig)) throw new Error('Config must be an array.');
-
-            // 更新全局状态 (触发相关的渲染更新)
-            state.reasonConfig = newConfig;
-
-            // 同步更新过滤器的状态结构
-            const newFilters = { ...state.filters.reasons };
-            newConfig.forEach((r) => {
-                if (newFilters[r.id] === undefined) newFilters[r.id] = true;
-            });
-            state.filters = { ...state.filters, reasons: newFilters };
-
-            // 重新渲染侧边栏
-            renderReasonCheckboxes();
-            domConfigModal.style.display = 'none';
-            alert('Configuration applied successfully!');
-        } catch (err) {
-            alert('Invalid JSON format: ' + err.message);
-        }
-    });
 
     // 🚨 修复：强制将浏览器表单当前的实际值同步到全局 State
     state.mapSizeTiles = parseInt(domTilesSelect.value, 10);
