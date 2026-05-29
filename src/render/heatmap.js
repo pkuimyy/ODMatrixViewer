@@ -83,18 +83,23 @@ export function initRenderer(DOM) {
             const endRow = Math.min(ROWS - 1, Math.ceil(screenBottom / cellH));
 
             // 1. 绘制热力图网格数据
+            const numReasons = gridContext.numReasons;
+            // 预分配数组避免在循环里频繁开辟内存
+            const counts = new Int32Array(numReasons);
+
             for (let row = startRow; row <= endRow; row++) {
                 for (let col = startCol; col <= endCol; col++) {
-                    const idx = (row * COLS + col) * 4;
-                    const counts = [
-                        gridData[idx],
-                        gridData[idx + 1],
-                        gridData[idx + 2],
-                        gridData[idx + 3]
-                    ];
+                    const idx = (row * COLS + col) * numReasons;
+
+                    let cellSum = 0;
+                    // 🚀 动态读取所有维度的值
+                    for (let k = 0; k < numReasons; k++) {
+                        counts[k] = gridData[idx + k];
+                        cellSum += counts[k];
+                    }
 
                     // 只要该网格包含任何有效数据
-                    if (counts[0] + counts[1] + counts[2] + counts[3] > 0) {
+                    if (cellSum > 0) {
                         ctx.fillStyle = getReasonColor(counts, gridContext.maxRef);
                         ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
                     }

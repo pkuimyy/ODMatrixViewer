@@ -1,10 +1,28 @@
 // src/state.js
 const listeners = new Map();
 
+const defaultReasonConfig = [
+    {
+        id: 0,
+        name: '💼 Work / Education',
+        color: [2, 132, 199],
+        keywords: ['work', 'school', 'study']
+    },
+    { id: 1, name: '🏡 Home / Resident', color: [22, 163, 74], keywords: ['home', 'family'] },
+    { id: 2, name: '🛒 Commercial', color: [234, 88, 12], keywords: ['shop', 'leisure'] },
+    { id: 3, name: '📦 Other', color: [147, 51, 234], keywords: ['*'] }
+];
+
+// 动态生成初始的 filters
+const initialReasonFilters = {};
+defaultReasonConfig.forEach((r) => {
+    initialReasonFilters[r.id] = true;
+});
+
 const _state = {
     timeSlice: 12,
     showAllDay: false,
-    filters: { O: true, D: true, reasons: { 0: true, 1: true, 2: true, 3: true } },
+    filters: { O: true, D: true, reasons: initialReasonFilters },
 
     // 图层透明度控制
     mapOpacity: 60,
@@ -15,6 +33,9 @@ const _state = {
     camera: { x: 0, y: 0, zoom: 1 },
     rawBatches: [],
 
+    // 🚀 新增配置项
+    reasonConfig: defaultReasonConfig,
+
     // 地图与网格动态配置
     mapSizeTiles: 9,
     gridSize: 10, // 🚨 变更为：以 u 为单位，默认 10u (10u = 80m)
@@ -22,7 +43,7 @@ const _state = {
     // 🚀 新增：区域框选与悬停控制状态
     focusedArea: null, // 已锁定的框选区域 { startCol, startRow, endCol, endRow }
     currentSelection: null, // 正在拖拽中的临时区域 { startCol, startRow, endCol, endRow }
-    hoveredGrid: null, // 当前鼠标悬停的网格坐标 { col, row }
+    hoveredGrid: null // 当前鼠标悬停的网格坐标 { col, row }
 };
 
 export const state = new Proxy(_state, {

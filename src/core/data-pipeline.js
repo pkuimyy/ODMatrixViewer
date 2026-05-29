@@ -1,14 +1,20 @@
-import { state } from '../state.js';
+import { state, subscribe } from '../state.js';
 // 🚨 修复：使用 Vite 推荐的 ?worker 后缀引入，彻底解决路径 404 和生产环境打包问题
 import ParserWorker from './parser.worker.js?worker';
 
 export function initDataPipeline(DOM) {
-    // 实例化 Worker
     const parserWorker = new ParserWorker();
-
     const dataBatches = [];
 
-    // 监听上传事件，移交 Worker
+    // 🚀 1. 启动时立即向 Worker 发送当前的解析规则
+    parserWorker.postMessage({ type: 'config', payload: state.reasonConfig });
+
+    // 🚀 2. 监听全局配置变更，实时同步给 Worker
+    subscribe('reasonConfig', (newConfig) => {
+        parserWorker.postMessage({ type: 'config', payload: newConfig });
+        console.log('[Pipeline] Worker syntax updated by new config.');
+    });
+
     DOM.csvUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -17,7 +23,8 @@ export function initDataPipeline(DOM) {
         DOM.fileStatus.classList.replace('text--muted', 'text--accent');
 
         dataBatches.length = 0;
-        parserWorker.postMessage({ file });
+        // 🚀 注意这里传递时包装 type
+        parserWorker.postMessage({ type: 'parse', file });
     });
 
     // 接收 Worker 回传的数据

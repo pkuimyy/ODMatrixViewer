@@ -1,9 +1,16 @@
 // src/core/parser.worker.js
 const BATCH_SIZE = 500000;
 const FLOATS_PER_RECORD = 6; // 🚀 新增一列：Ox, Oy, Dx, Dy, Hour, ReasonId
-const TICKS_PER_HOUR = 36000000000n;
+
+let currentConfig = []; // 🚀 存储外部下发的动态配置
 
 self.onmessage = async (e) => {
+    // 🚀 拦截并保存配置更新消息
+    if (e.data.type === "config") {
+        currentConfig = e.data.payload;
+        return;
+    }
+
     const { file } = e.data;
     if (!file) return;
 
@@ -15,45 +22,28 @@ self.onmessage = async (e) => {
     }
 };
 
-// 💡 基于 Cities: Skylines 原生 TransferReason 枚举的精确分类
 function parseReasonToCategory(raw) {
-    if (raw === undefined || raw === null) return 3; // 默认为 Other
+    // 兜底策略：如果没配置，或者配置为空，默认丢给最后一个分类或0
+    if (!currentConfig || currentConfig.length === 0) return 0;
+    const defaultId = currentConfig[currentConfig.length - 1].id;
 
+    if (raw === undefined || raw === null) return defaultId;
     const str = raw.toString().trim().toLowerCase();
 
-    // 1. 文本匹配 (兼容用户自己导出的文本型 CSV 或多语言别名)
-    if (str.match(/work|school|study|job|educat/)) return 0;
-    if (str.match(/home|return|residen|family|single|partner/)) return 1;
-    if (str.match(/shop|leisure|entertain|visit|tourist|nature|business/)) return 2;
+    for (let i = 0; i < currentConfig.length; i++) {
+        const configItem = currentConfig[i];
+        const keywords = configItem.keywords;
+        if (!keywords || !Array.isArray(keywords)) continue;
 
-    // 2. 底层枚举纯数字精确匹配 (CSL TransferReason Enum)
-    const num = parseInt(str, 10);
-    if (!isNaN(num)) {
-        // 💼 Category 0: Work / School (通勤 / 上学)
-        // Worker0(4) ~ Worker3(7), Student1(8) ~ Student3(10)
-        if (num >= 4 && num <= 10) return 0;
-
-        // 🏡 Category 1: Home / Resident (回家 / 居住)
-        // Family0(20) ~ PartnerAdult(29), Single0B(47) ~ Single3B(50)
-        if ((num >= 20 && num <= 29) || (num >= 47 && num <= 50)) return 1;
-
-        // 🛒 Category 2: Shopping / Entertainment (商业 / 娱乐 / 观光)
-        if (
-            num === 30 || // Shopping
-            num === 36 || // Entertainment
-            (num >= 51 && num <= 60) || // ShoppingB-H(51-57), EntertainmentB-D(58-60)
-            (num >= 88 && num <= 91) || // TouristA-D(88-91)
-            (num >= 119 && num <= 126)  // BusinessA-D(119-122) (公园商业区观光), NatureA-D(123-126) (自然保护区观光)
-        ) {
-            return 2;
+        for (let k of keywords) {
+            if (k === "*") return configItem.id; // 通配符兜底类
+            // 如果关键词是数字（兼容 CS 导出的纯数字枚举）
+            if (str === k.toString().toLowerCase()) return configItem.id;
+            // 文本模糊匹配
+            if (str.includes(k.toLowerCase())) return configItem.id;
         }
-
-        // 📦 Category 3: Other (其他物流/公共服务/特殊状态)
-        // 包含 Garbage, Crime, Sick, Dead, Fire, 货物(Goods/Oil/Ore/Logs), 各类交通工具(Bus/Train/Taxi), 邮政(Mail), 工业DLC产品等...
-        return 3;
     }
-
-    return 3; 
+    return defaultId;
 }
 
 // 🌟 跨浏览器兼容的流式读取方案 (Firefox / Safari 均完美支持)
