@@ -121,7 +121,11 @@ export function initViewport(DOM) {
 
         // ✨ 功能一：实时计算并更新鼠标悬停高亮的网格
         if (col >= 0 && col < totalCols && row >= 0 && row < totalRows) {
-            if (!state.hoveredGrid || state.hoveredGrid.col !== col || state.hoveredGrid.row !== row) {
+            if (
+                !state.hoveredGrid ||
+                state.hoveredGrid.col !== col ||
+                state.hoveredGrid.row !== row
+            ) {
                 state.hoveredGrid = { col, row };
             }
         } else {
@@ -165,7 +169,7 @@ export function initViewport(DOM) {
                 state.focusedGrid = null; // 与单网格聚焦互斥
             }
         }
-        
+
         isDragging = false;
         DOM.canvas.style.cursor = 'grab';
     });
@@ -202,7 +206,11 @@ export function initViewport(DOM) {
 
         if (col >= 0 && col < totalCols && row >= 0 && row < totalRows) {
             state.focusedArea = null; // 互斥清空区域
-            if (state.focusedGrid && state.focusedGrid.col === col && state.focusedGrid.row === row) {
+            if (
+                state.focusedGrid &&
+                state.focusedGrid.col === col &&
+                state.focusedGrid.row === row
+            ) {
                 state.focusedGrid = null;
             } else {
                 state.focusedGrid = { col, row };
