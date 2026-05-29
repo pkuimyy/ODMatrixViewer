@@ -23,11 +23,12 @@ export function updateGridConfig() {
     gridContext.COLS = Math.ceil(gridContext.WORLD_SIZE / gridContext.GRID_RES);
     gridContext.ROWS = Math.ceil(gridContext.WORLD_SIZE / gridContext.GRID_RES);
 
-    // 🚀 容量扩大 4 倍，结构为交错排列: [C0, C1, C2, C3,  C0, C1...]
+    // 🚀 动态读取当前的类别总数
+    gridContext.numReasons = state.reasonConfig.length;
     gridContext.gridData = new Int32Array(
         gridContext.COLS * gridContext.ROWS * gridContext.numReasons
     );
-    console.log(`[Aggregator] Grid Updated: ${gridContext.COLS}x${gridContext.ROWS}`);
+    console.log(`[Aggregator] Grid Updated. Reasons dimension: ${gridContext.numReasons}`);
     aggregateData();
 }
 
@@ -92,11 +93,10 @@ export function aggregateData() {
         // 计算 95% 分位数最大参考值，采用 4 个维度的总和
         const activeValues = [];
         for (let i = 0; i < gridContext.gridData.length; i += numReasons) {
-            const sum =
-                gridContext.gridData[i] +
-                gridContext.gridData[i + 1] +
-                gridContext.gridData[i + 2] +
-                gridContext.gridData[i + 3];
+            let sum = 0;
+            for (let k = 0; k < numReasons; k++) {
+                sum += gridContext.gridData[i + k];
+            }
             if (sum > 0) activeValues.push(sum);
         }
 
