@@ -1,3 +1,4 @@
+// src/ui/viewport.js
 import { state, subscribe } from '../state.js';
 
 export function initViewport(DOM) {
@@ -39,6 +40,32 @@ export function initViewport(DOM) {
         return { x: clampedX, y: clampedY, zoom: clampedZoom };
     }
 
+    // 🚀 新增辅助函数：将屏幕鼠标坐标换算为网格行列坐标(col, row)
+    function getGridCoords(clientX, clientY) {
+        const rect = DOM.canvas.getBoundingClientRect();
+        const mouseX = clientX - rect.left;
+        const mouseY = clientY - rect.top;
+        const { x, y, zoom } = state.camera;
+
+        const worldX = (mouseX - x) / zoom;
+        const worldY = (mouseY - y) / zoom;
+
+        const WORLD_SIZE = state.mapSizeTiles * 1920;
+        const GRID_RES = state.gridSize * 8;
+        const COLS = Math.ceil(WORLD_SIZE / GRID_RES);
+        const ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
+
+        const imgW = state.mapDimensions.width || WORLD_SIZE;
+        const imgH = state.mapDimensions.height || WORLD_SIZE;
+        const cellW = imgW / COLS;
+        const cellH = imgH / ROWS;
+
+        const col = Math.floor(worldX / cellW);
+        const row = Math.floor(worldY / cellH);
+
+        return { col, row, totalCols: COLS, totalRows: ROWS };
+    }
+
     // ==========================================
     // 视图基础设置
     // ==========================================
@@ -62,20 +89,62 @@ export function initViewport(DOM) {
     });
 
     // ==========================================
-    // 鼠标交互事件 (Pan & Zoom)
+    // 鼠标交互事件 (Pan, Hover & Area Selection)
     // ==========================================
     let isDragging = false;
+    let isSelectingArea = false; // 🚀 新增：是否正在进行框选
+    let selectionStartGrid = null; // 🚀 新增：框选起点网格
     let lastMouseX = 0;
     let lastMouseY = 0;
 
     DOM.canvas.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-        DOM.canvas.style.cursor = 'grabbing';
+        // 🚀 核心逻辑区分：如果按住了 Shift 键，则触发框选逻辑
+        if (e.shiftKey) {
+            const { col, row, totalCols, totalRows } = getGridCoords(e.clientX, e.clientY);
+            if (col >= 0 && col < totalCols && row >= 0 && row < totalRows) {
+                isSelectingArea = true;
+                selectionStartGrid = { col, row };
+                state.currentSelection = { startCol: col, startRow: row, endCol: col, endRow: row };
+                DOM.canvas.style.cursor = 'crosshair'; // 框选时变成十字光标
+            }
+        } else {
+            // 普通左键拖拽：平移地图
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            DOM.canvas.style.cursor = 'grabbing';
+        }
     });
 
     window.addEventListener('mousemove', (e) => {
+        const { col, row, totalCols, totalRows } = getGridCoords(e.clientX, e.clientY);
+
+        // ✨ 功能一：实时计算并更新鼠标悬停高亮的网格
+        if (col >= 0 && col < totalCols && row >= 0 && row < totalRows) {
+            if (!state.hoveredGrid || state.hoveredGrid.col !== col || state.hoveredGrid.row !== row) {
+                state.hoveredGrid = { col, row };
+            }
+        } else {
+            if (state.hoveredGrid !== null) state.hoveredGrid = null;
+        }
+
+        // ✨ 功能二：处理正在框选的拖拽过程
+        if (isSelectingArea && selectionStartGrid) {
+            // 限制网格不越界
+            const currentCol = Math.max(0, Math.min(totalCols - 1, col));
+            const currentRow = Math.max(0, Math.min(totalRows - 1, row));
+
+            // 根据“总是从左上角开始、到右下角结束”的几何要求，用 Math.min/max 确保数据顺序
+            state.currentSelection = {
+                startCol: Math.min(selectionStartGrid.col, currentCol),
+                startRow: Math.min(selectionStartGrid.row, currentRow),
+                endCol: Math.max(selectionStartGrid.col, currentCol),
+                endRow: Math.max(selectionStartGrid.row, currentRow)
+            };
+            return; // 框选时拦截平移逻辑
+        }
+
+        // 原平移逻辑
         if (!isDragging) return;
         const deltaX = e.clientX - lastMouseX;
         const deltaY = e.clientY - lastMouseY;
@@ -87,6 +156,16 @@ export function initViewport(DOM) {
     });
 
     window.addEventListener('mouseup', () => {
+        // 🚀 框选结束，锁定区域
+        if (isSelectingArea) {
+            isSelectingArea = false;
+            if (state.currentSelection) {
+                state.focusedArea = state.currentSelection; // 激活区域探查
+                state.currentSelection = null; // 清除临时状态
+                state.focusedGrid = null; // 与单网格聚焦互斥
+            }
+        }
+        
         isDragging = false;
         DOM.canvas.style.cursor = 'grab';
     });
@@ -117,35 +196,13 @@ export function initViewport(DOM) {
         { passive: false }
     );
 
-    // 🚨 1. 将原来的 'click' 修改为 'dblclick'
+    // 双击聚焦单网格（保持原样，但增加清除区域聚焦的互斥）
     DOM.canvas.addEventListener('dblclick', (e) => {
-        const rect = DOM.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const { x, y, zoom } = state.camera;
+        const { col, row, totalCols, totalRows } = getGridCoords(e.clientX, e.clientY);
 
-        const worldX = (mouseX - x) / zoom;
-        const worldY = (mouseY - y) / zoom;
-
-        const WORLD_SIZE = state.mapSizeTiles * 1920;
-        const GRID_RES = state.gridSize * 8;
-        const COLS = Math.ceil(WORLD_SIZE / GRID_RES);
-        const ROWS = Math.ceil(WORLD_SIZE / GRID_RES);
-
-        const imgW = state.mapDimensions.width || WORLD_SIZE;
-        const imgH = state.mapDimensions.height || WORLD_SIZE;
-        const cellW = imgW / COLS;
-        const cellH = imgH / ROWS;
-
-        const col = Math.floor(worldX / cellW);
-        const row = Math.floor(worldY / cellH);
-
-        if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
-            if (
-                state.focusedGrid &&
-                state.focusedGrid.col === col &&
-                state.focusedGrid.row === row
-            ) {
+        if (col >= 0 && col < totalCols && row >= 0 && row < totalRows) {
+            state.focusedArea = null; // 互斥清空区域
+            if (state.focusedGrid && state.focusedGrid.col === col && state.focusedGrid.row === row) {
                 state.focusedGrid = null;
             } else {
                 state.focusedGrid = { col, row };
@@ -155,18 +212,16 @@ export function initViewport(DOM) {
         }
     });
 
-    // 🚨 2. 新增：全局监听键盘 Esc 键以退出聚焦模式
+    // 全局退出模式（支持 Esc 同时清除单网格和区域框选）
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && state.focusedGrid) {
-            state.focusedGrid = null;
+        if (e.key === 'Escape') {
+            if (state.focusedGrid) state.focusedGrid = null;
+            if (state.focusedArea) state.focusedArea = null;
         }
     });
 
-    // ==========================================
     // 视图同步订阅
-    // ==========================================
     subscribe('camera', (cam) => {
         DOM.mapLayer.style.transform = `translate3d(${cam.x}px, ${cam.y}px, 0) scale(${cam.zoom})`;
-        // TODO: renderHeatmap();
     });
 }

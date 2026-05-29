@@ -102,12 +102,28 @@ export function initSidebar(DOM) {
         DOM.timeDisplay.textContent = `${newTime.toString().padStart(2, '0')}:00`;
     });
 
+    // 请找到原有的这一段并更新为：
     subscribe('focusedGrid', (grid) => {
         if (grid) {
-            // 🚨 更新提示文案
             DOM.fileStatus.textContent = `📍 Focused: [${grid.col}, ${grid.row}] (Press Esc to clear)`;
             DOM.fileStatus.classList.replace('text--muted', 'text--accent');
-        } else {
+        } else if (!state.focusedArea) { // 🚀 增加此判断：只有在区域聚集也为空时才重置文案
+            DOM.fileStatus.textContent =
+                state.rawBatches && state.rawBatches.length > 0
+                    ? 'Data Ready (Global View)'
+                    : 'Awaiting import...';
+            DOM.fileStatus.classList.replace('text--accent', 'text--muted');
+        }
+    });
+
+    // src/ui/sidebar.js 内部，追加在 initSidebar 函数的底部
+    subscribe('focusedArea', (area) => {
+        if (area) {
+            // 🚨 更新提示文案，反映框选区域的左上角与右下角
+            DOM.fileStatus.textContent = `📍 Area Focused: [${area.startCol},${area.startRow}] to [${area.endCol},${area.endRow}] (Press Esc to clear)`;
+            DOM.fileStatus.classList.replace('text--muted', 'text--accent');
+        } else if (!state.focusedGrid) {
+            // 如果单格聚焦和区域聚焦都为空，才恢复全局提示
             DOM.fileStatus.textContent =
                 state.rawBatches && state.rawBatches.length > 0
                     ? 'Data Ready (Global View)'
