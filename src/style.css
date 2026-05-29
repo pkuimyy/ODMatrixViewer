@@ -28,24 +28,90 @@ body {
   color: var(--text-main);
   height: 100vh;
   overflow: hidden;
+  /* 使用网格将页面垂直切分为：Header自适应 + 主体1fr + Footer自适应 */
+  display: grid;
+  grid-template-rows: auto 1fr auto;
 }
 
-/* --- Layout --- */
+/* --- Layout & Global Components --- */
+.app-header {
+  background-color: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  z-index: 10;
+}
+
+.app-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.app-nav {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-link {
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-app);
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  background-color: var(--bg-panel);
+  border-color: var(--text-muted);
+}
+
 .app-container {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  height: 100vh;
+  /* 将主体水平切分为：左侧栏 320px + 画布自动撑满 + 右侧栏 320px */
+  grid-template-columns: 320px 1fr 320px;
+  height: 100%;
 }
 
 /* --- Sidebar --- */
 .sidebar {
   background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   padding: 20px;
   overflow-y: auto;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02); /* Slight shadow for depth */
+}
+
+/* 区分左右边栏的边框和阴影方向 */
+.sidebar--left {
+  border-right: 1px solid var(--border-color);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.01);
+}
+
+.sidebar--right {
+  border-left: 1px solid var(--border-color);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.01);
+}
+
+/* --- Footer --- */
+.app-footer {
+  background-color: var(--bg-sidebar);
+  border-top: 1px solid var(--border-color);
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  z-index: 10;
 }
 
 .sidebar__header {
