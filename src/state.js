@@ -20,9 +20,9 @@ const _state = {
     gridSize: 10, // 🚨 变更为：以 u 为单位，默认 10u (10u = 80m)
 
     // 🚀 新增：区域框选与悬停控制状态
-    focusedArea: null,      // 已锁定的框选区域 { startCol, startRow, endCol, endRow }
+    focusedArea: null, // 已锁定的框选区域 { startCol, startRow, endCol, endRow }
     currentSelection: null, // 正在拖拽中的临时区域 { startCol, startRow, endCol, endRow }
-    hoveredGrid: null       // 当前鼠标悬停的网格坐标 { col, row }
+    hoveredGrid: null // 当前鼠标悬停的网格坐标 { col, row }
 };
 
 export const state = new Proxy(_state, {

@@ -40,77 +40,73 @@ export function initRenderer(DOM) {
     function aggregateData() {
         gridData.fill(0);
         const batches = state.rawBatches;
-        if (!batches || batches.length === 0) return;
 
-        const timeSlice = state.timeSlice;
-        const showAllDay = state.showAllDay;
-        const showO = state.filters.O;
-        const showD = state.filters.D;
+        // 🚨 修复逻辑：如果有数据才执行聚合，但千万不能提早 return 结束函数！
+        if (batches && batches.length > 0) {
+            const timeSlice = state.timeSlice;
+            const showAllDay = state.showAllDay;
+            const showO = state.filters.O;
+            const showD = state.filters.D;
+            const focusedGrid = state.focusedGrid;
+            const focusedArea = state.focusedArea;
 
-        // 🚀 提取单网格聚焦与区域聚焦状态
-        const focusedGrid = state.focusedGrid;
-        const focusedArea = state.focusedArea;
+            const inArea = (c, r, area) => {
+                return (
+                    c >= area.startCol && c <= area.endCol && r >= area.startRow && r <= area.endRow
+                );
+            };
 
-        // 🚀 辅助闭包：判断网格是否包含在框选区域内
-        const inArea = (c, r, area) => {
-            return c >= area.startCol && c <= area.endCol && r >= area.startRow && r <= area.endRow;
-        };
+            for (let b = 0; b < batches.length; b++) {
+                const batch = batches[b];
+                for (let i = 0; i < batch.length; i += 5) {
+                    const recordHour = batch[i + 4];
+                    if (!showAllDay && recordHour !== timeSlice) continue;
 
-        for (let b = 0; b < batches.length; b++) {
-            const batch = batches[b];
-            for (let i = 0; i < batch.length; i += 5) {
-                const recordHour = batch[i + 4];
-                if (!showAllDay && recordHour !== timeSlice) continue;
+                    const oCol = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
+                    const oRow = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
+                    const dCol = Math.floor((batch[i + 2] + HALF_WORLD) / GRID_RES);
+                    const dRow = Math.floor((HALF_WORLD - batch[i + 3]) / GRID_RES);
 
-                const oCol = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
-                const oRow = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
-                const dCol = Math.floor((batch[i + 2] + HALF_WORLD) / GRID_RES);
-                const dRow = Math.floor((HALF_WORLD - batch[i + 3]) / GRID_RES);
+                    const validO = oCol >= 0 && oCol < COLS && oRow >= 0 && oRow < ROWS;
+                    const validD = dCol >= 0 && dCol < COLS && dRow >= 0 && dRow < ROWS;
 
-                const validO = oCol >= 0 && oCol < COLS && oRow >= 0 && oRow < ROWS;
-                const validD = dCol >= 0 && dCol < COLS && dRow >= 0 && dRow < ROWS;
+                    if (!validO || !validD) continue;
 
-                if (!validO || !validD) continue;
-
-                if (focusedGrid) {
-                    // 🌍 【单格焦点探查模式】
-                    if (showO && dCol === focusedGrid.col && dRow === focusedGrid.row) {
-                        gridData[oRow * COLS + oCol]++;
+                    if (focusedGrid) {
+                        if (showO && dCol === focusedGrid.col && dRow === focusedGrid.row)
+                            gridData[oRow * COLS + oCol]++;
+                        if (showD && oCol === focusedGrid.col && oRow === focusedGrid.row)
+                            gridData[dRow * COLS + dCol]++;
+                    } else if (focusedArea) {
+                        if (showO && inArea(dCol, dRow, focusedArea))
+                            gridData[oRow * COLS + oCol]++;
+                        if (showD && inArea(oCol, oRow, focusedArea))
+                            gridData[dRow * COLS + dCol]++;
+                    } else {
+                        if (showO) gridData[oRow * COLS + oCol]++;
+                        if (showD) gridData[dRow * COLS + dCol]++;
                     }
-                    if (showD && oCol === focusedGrid.col && oRow === focusedGrid.row) {
-                        gridData[dRow * COLS + dCol]++;
-                    }
-                } else if (focusedArea) {
-                    // 🎯 【区域框选探查模式】（新支持）
-                    // 入度探查：当目的网格(D)包含在框选区域内部时，画出它的起点(O)
-                    if (showO && inArea(dCol, dRow, focusedArea)) {
-                        gridData[oRow * COLS + oCol]++;
-                    }
-                    // 出度探查：当起始网格(O)包含在框选区域内部时，画出它的终点(D)
-                    if (showD && inArea(oCol, oRow, focusedArea)) {
-                        gridData[dRow * COLS + dCol]++;
-                    }
-                } else {
-                    // 🌍 【全局宏观模式】
-                    if (showO) gridData[oRow * COLS + oCol]++;
-                    if (showD) gridData[dRow * COLS + dCol]++;
                 }
             }
-        }
 
-        const activeValues = [];
-        for (let i = 0; i < gridData.length; i++) {
-            if (gridData[i] > 0) activeValues.push(gridData[i]);
-        }
+            const activeValues = [];
+            for (let i = 0; i < gridData.length; i++) {
+                if (gridData[i] > 0) activeValues.push(gridData[i]);
+            }
 
-        if (activeValues.length > 0) {
-            activeValues.sort((a, b) => a - b);
-            maxRef = activeValues[Math.floor(activeValues.length * 0.95)];
+            if (activeValues.length > 0) {
+                activeValues.sort((a, b) => a - b);
+                maxRef = activeValues[Math.floor(activeValues.length * 0.95)];
+            } else {
+                maxRef = 1;
+            }
         } else {
-            maxRef = 1;
+            maxRef = 1; // 无数据时的默认值
         }
+
         if (maxRef < 1) maxRef = 1;
 
+        // 🚨 无论有没有数据，只要是初始状态，就自适应画布，确保网格能完整显示在屏幕上！
         if (state.camera.zoom === 1 && state.mapDimensions.width === 0) {
             const rect = canvas.getBoundingClientRect();
             const fitZoom = Math.min(rect.width / WORLD_SIZE, rect.height / WORLD_SIZE) * 0.9;
@@ -121,7 +117,7 @@ export function initRenderer(DOM) {
             };
         }
 
-        render();
+        render(); // 保证绘图函数一定会被调用
     }
 
     function getCyberColor(value) {
@@ -135,13 +131,19 @@ export function initRenderer(DOM) {
 
         if (ratio < 0.33) {
             const t = ratio / 0.33;
-            r = 255; g = Math.floor(255 - t * 105); b = Math.floor(200 - t * 200);
+            r = 255;
+            g = Math.floor(255 - t * 105);
+            b = Math.floor(200 - t * 200);
         } else if (ratio < 0.66) {
             const t = (ratio - 0.33) / 0.33;
-            r = Math.floor(255 - t * 75); g = Math.floor(150 - t * 150); b = 0;
+            r = Math.floor(255 - t * 75);
+            g = Math.floor(150 - t * 150);
+            b = 0;
         } else {
             const t = (ratio - 0.66) / 0.34;
-            r = Math.floor(180 - t * 160); g = 0; b = Math.floor(t * 50);
+            r = Math.floor(180 - t * 160);
+            g = 0;
+            b = Math.floor(t * 50);
         }
         return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
     }
@@ -186,7 +188,6 @@ export function initRenderer(DOM) {
             const startRow = Math.max(0, Math.floor(screenTop / cellH));
             const endRow = Math.min(ROWS - 1, Math.ceil(screenBottom / cellH));
 
-            // 1. 绘制基础热力网格
             for (let row = startRow; row <= endRow; row++) {
                 for (let col = startCol; col <= endCol; col++) {
                     const val = gridData[row * COLS + col];
@@ -197,7 +198,6 @@ export function initRenderer(DOM) {
                 }
             }
 
-            // 2. 绘制辅助网格虚线
             if (cellW * zoom > 5) {
                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
                 ctx.lineWidth = 1 / zoom;
@@ -217,7 +217,6 @@ export function initRenderer(DOM) {
                 ctx.setLineDash([]);
             }
 
-            // 🚀 3. 新增：实时绘制鼠标悬停高亮网格（淡天蓝色）
             if (state.hoveredGrid) {
                 const hCol = state.hoveredGrid.col;
                 const hRow = state.hoveredGrid.row;
@@ -226,7 +225,6 @@ export function initRenderer(DOM) {
                 ctx.strokeRect(hCol * cellW, hRow * cellH, cellW, cellH);
             }
 
-            // 🚀 4. 保持原样：单格焦点网格高亮（深天蓝色加半透明填充）
             if (state.focusedGrid) {
                 const fCol = state.focusedGrid.col;
                 const fRow = state.focusedGrid.row;
@@ -237,32 +235,28 @@ export function initRenderer(DOM) {
                 ctx.strokeRect(fCol * cellW, fRow * cellH, cellW, cellH);
             }
 
-            // 🚀 5. 新增：绘制正在进行中拖拽的临时框选框（琥珀色虚线框）
             if (state.currentSelection) {
                 const { startCol, startRow, endCol, endRow } = state.currentSelection;
                 const sX = startCol * cellW;
                 const sY = startRow * cellH;
                 const sW = (endCol - startCol + 1) * cellW;
                 const sH = (endRow - startRow + 1) * cellH;
-
                 ctx.strokeStyle = '#f59e0b';
                 ctx.lineWidth = Math.max(2 / zoom, 1);
-                ctx.setLineDash([6 / zoom, 4 / zoom]); // 框选专用长虚线
+                ctx.setLineDash([6 / zoom, 4 / zoom]);
                 ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
                 ctx.fillRect(sX, sY, sW, sH);
                 ctx.strokeRect(sX, sY, sW, sH);
                 ctx.setLineDash([]);
             }
 
-            // 🚀 6. 新增：绘制已锁定的聚焦探查区域（翠绿色实线边框 + 微弱填充）
             if (state.focusedArea) {
                 const { startCol, startRow, endCol, endRow } = state.focusedArea;
                 const aX = startCol * cellW;
                 const aY = startRow * cellH;
                 const aW = (endCol - startCol + 1) * cellW;
                 const aH = (endRow - startRow + 1) * cellH;
-
-                ctx.strokeStyle = '#10b981'; // 翠绿色，区别于单格的蓝色
+                ctx.strokeStyle = '#10b981';
                 ctx.lineWidth = Math.max(2.5 / zoom, 1.5);
                 ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
                 ctx.fillRect(aX, aY, aW, aH);
@@ -284,11 +278,12 @@ export function initRenderer(DOM) {
     subscribe('mapDimensions', aggregateData);
     subscribe('mapSizeTiles', updateGridConfig);
     subscribe('gridSize', updateGridConfig);
-
-    // 🚀 增加全新响应式订阅，确保渲染器能够感知悬停和框选的变化
     subscribe('focusedGrid', aggregateData);
     subscribe('focusedArea', aggregateData);
-    subscribe('hoveredGrid', render);       // Hover 只需要重绘画面，不需要重新聚合数据
-    subscribe('currentSelection', render);  // 临时虚线框拖拽时实时重绘
+    subscribe('hoveredGrid', render);
+    subscribe('currentSelection', render);
     subscribe('showAllDay', aggregateData);
+
+    // 🚀 在所有的订阅绑定完毕后，执行首次主动更新
+    updateGridConfig();
 }
