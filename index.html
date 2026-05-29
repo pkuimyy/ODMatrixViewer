@@ -166,61 +166,19 @@
               <input type="checkbox" name="reason" value="3" checked /> 📦 Other / Logistics
             </label>
           </div>
-          <button
-            id="btn-open-config"
+          <a
+            href="/settings.html"
             class="btn"
-            style="border: 1px solid var(--border-color); width: 100%; margin-bottom: 15px"
-          >
-            ⚙️ Setting (JSON Config)
-          </button>
-
-          <div id="reason-filter-container" class="control-group"></div>
-
-          <div
-            id="config-modal"
             style="
-              display: none;
-              position: absolute;
-              inset: 0;
-              background: rgba(0, 0, 0, 0.5);
-              z-index: 100;
-              justify-content: center;
-              align-items: center;
+              border: 1px solid var(--border-color);
+              width: 100%;
+              margin-bottom: 15px;
+              display: block;
+              text-decoration: none;
             "
           >
-            <div
-              style="
-                background: var(--bg-sidebar);
-                padding: 20px;
-                width: 500px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              "
-            >
-              <h3 style="margin-bottom: 15px">Reason Configuration</h3>
-              <textarea
-                id="config-json-input"
-                rows="12"
-                style="
-                  width: 100%;
-                  font-family: monospace;
-                  padding: 10px;
-                  margin-bottom: 15px;
-                  border: 1px solid var(--border-color);
-                "
-              ></textarea>
-              <div style="display: flex; justify-content: flex-end; gap: 10px">
-                <button
-                  id="btn-close-config"
-                  class="btn"
-                  style="border: 1px solid var(--border-color)"
-                >
-                  Cancel
-                </button>
-                <button id="btn-save-config" class="btn btn--primary">Save & Apply</button>
-              </div>
-            </div>
-          </div>
+            ⚙️ Advanced Setting (JSON)
+          </a>
         </section>
       </aside>
 

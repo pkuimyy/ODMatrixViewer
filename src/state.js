@@ -1,22 +1,65 @@
-// src/state.js
-const listeners = new Map();
+import defaultReasonConfig from './config/reasons.json'; // 引入前面创建的默认配置 JSON
 
-const defaultReasonConfig = [
-    {
-        id: 0,
-        name: '💼 Work / Education',
-        color: [2, 132, 199],
-        keywords: ['work', 'school', 'study']
-    },
-    { id: 1, name: '🏡 Home / Resident', color: [22, 163, 74], keywords: ['home', 'family'] },
-    { id: 2, name: '🛒 Commercial', color: [234, 88, 12], keywords: ['shop', 'leisure'] },
-    { id: 3, name: '📦 Other', color: [147, 51, 234], keywords: ['*'] }
-];
+const listeners = new Map();
+const STORAGE_KEY = 'odmatrix_reason_config';
+let initialConfig;
 
 // 动态生成初始的 filters
 const initialReasonFilters = {};
 defaultReasonConfig.forEach((r) => {
     initialReasonFilters[r.id] = true;
+});
+
+try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    initialConfig = saved ? JSON.parse(saved) : defaultReasonConfig;
+} catch (e) {
+    initialConfig = defaultReasonConfig;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const editor = document.getElementById('json-editor');
+    const btnSave = document.getElementById('btn-save');
+    const btnReset = document.getElementById('btn-reset');
+
+    // 1. 初始化读取
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const displayData = saved ? JSON.parse(saved) : defaultReasonConfig;
+        editor.value = JSON.stringify(displayData, null, 4);
+    } catch (e) {
+        editor.value = JSON.stringify(defaultReasonConfig, null, 4);
+    }
+
+    // 2. 保存逻辑
+    btnSave.addEventListener('click', () => {
+        try {
+            const parsedConfig = JSON.parse(editor.value);
+            if (!Array.isArray(parsedConfig)) {
+                throw new Error('Configuration must be a JSON array.');
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedConfig));
+            alert('Configuration saved successfully!');
+
+            // 保存后直接跳转回主页
+            window.location.href = '/index.html';
+        } catch (error) {
+            alert('❌ Invalid JSON format:\n' + error.message);
+        }
+    });
+
+    // 3. 恢复默认设置
+    btnReset.addEventListener('click', () => {
+        const confirmReset = confirm(
+            'Are you sure you want to restore defaults? Custom mappings will be lost.'
+        );
+        if (confirmReset) {
+            localStorage.removeItem(STORAGE_KEY);
+            alert('Restored to defaults.');
+            editor.value = JSON.stringify(defaultReasonConfig, null, 4);
+        }
+    });
 });
 
 const _state = {
@@ -34,7 +77,7 @@ const _state = {
     rawBatches: [],
 
     // 🚀 新增配置项
-    reasonConfig: defaultReasonConfig,
+    reasonConfig: initialConfig,
 
     // 地图与网格动态配置
     mapSizeTiles: 9,
