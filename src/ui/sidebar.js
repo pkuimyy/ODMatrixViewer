@@ -81,6 +81,19 @@ export function initSidebar(DOM) {
         }
     });
 
+    DOM.reasonFilterContainer.addEventListener('change', (e) => {
+        if (e.target.matches('input[type="checkbox"]')) {
+            const reasonId = parseInt(e.target.value, 10);
+            state.filters = { 
+                ...state.filters, 
+                reasons: { 
+                    ...state.filters.reasons, 
+                    [reasonId]: e.target.checked 
+                } 
+            };
+        }
+    });
+
     // === 4. 状态订阅更新 UI ===
     subscribe('mapImageUrl', (url) => {
         DOM.mapLayer.src = url;

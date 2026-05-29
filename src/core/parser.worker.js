@@ -1,6 +1,6 @@
 // src/core/parser.worker.js
 const BATCH_SIZE = 500000;
-const FLOATS_PER_RECORD = 5;
+const FLOATS_PER_RECORD = 6; // 🚀 新增一列：Ox, Oy, Dx, Dy, Hour, ReasonId
 const TICKS_PER_HOUR = 36000000000n;
 
 self.onmessage = async (e) => {
@@ -14,6 +14,47 @@ self.onmessage = async (e) => {
         self.postMessage({ type: "error", error: err.message });
     }
 };
+
+// 💡 基于 Cities: Skylines 原生 TransferReason 枚举的精确分类
+function parseReasonToCategory(raw) {
+    if (raw === undefined || raw === null) return 3; // 默认为 Other
+
+    const str = raw.toString().trim().toLowerCase();
+
+    // 1. 文本匹配 (兼容用户自己导出的文本型 CSV 或多语言别名)
+    if (str.match(/work|school|study|job|educat/)) return 0;
+    if (str.match(/home|return|residen|family|single|partner/)) return 1;
+    if (str.match(/shop|leisure|entertain|visit|tourist|nature|business/)) return 2;
+
+    // 2. 底层枚举纯数字精确匹配 (CSL TransferReason Enum)
+    const num = parseInt(str, 10);
+    if (!isNaN(num)) {
+        // 💼 Category 0: Work / School (通勤 / 上学)
+        // Worker0(4) ~ Worker3(7), Student1(8) ~ Student3(10)
+        if (num >= 4 && num <= 10) return 0;
+
+        // 🏡 Category 1: Home / Resident (回家 / 居住)
+        // Family0(20) ~ PartnerAdult(29), Single0B(47) ~ Single3B(50)
+        if ((num >= 20 && num <= 29) || (num >= 47 && num <= 50)) return 1;
+
+        // 🛒 Category 2: Shopping / Entertainment (商业 / 娱乐 / 观光)
+        if (
+            num === 30 || // Shopping
+            num === 36 || // Entertainment
+            (num >= 51 && num <= 60) || // ShoppingB-H(51-57), EntertainmentB-D(58-60)
+            (num >= 88 && num <= 91) || // TouristA-D(88-91)
+            (num >= 119 && num <= 126)  // BusinessA-D(119-122) (公园商业区观光), NatureA-D(123-126) (自然保护区观光)
+        ) {
+            return 2;
+        }
+
+        // 📦 Category 3: Other (其他物流/公共服务/特殊状态)
+        // 包含 Garbage, Crime, Sick, Dead, Fire, 货物(Goods/Oil/Ore/Logs), 各类交通工具(Bus/Train/Taxi), 邮政(Mail), 工业DLC产品等...
+        return 3;
+    }
+
+    return 3; 
+}
 
 // 🌟 跨浏览器兼容的流式读取方案 (Firefox / Safari 均完美支持)
 async function processFileUniversal(file) {
@@ -56,14 +97,16 @@ async function processFileUniversal(file) {
                 hour = Math.floor(gameTimeOfDay * 24) % 24;
             }
 
+            // 📌 解析 Reason
+            const reasonId = parseReasonToCategory(parts[3]);
+
             // 📍 坐标提取：更新为新的列索引 (5: OriginX, 6: OriginZ, 7: DestX, 8: DestZ)
             buffer[bufferIndex++] = parseFloat(parts[5]); // Ox
             buffer[bufferIndex++] = parseFloat(parts[6]); // Oy
             buffer[bufferIndex++] = parseFloat(parts[7]); // Dx
             buffer[bufferIndex++] = parseFloat(parts[8]); // Dy
             buffer[bufferIndex++] = hour; // Hour
-
-            totalRows++;
+            buffer[bufferIndex++] = reasonId; // Reason
 
             totalRows++;
 

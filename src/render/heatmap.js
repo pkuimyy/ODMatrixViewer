@@ -1,6 +1,6 @@
 // src/render/heatmap.js
 import { state, subscribe } from '../state.js';
-import { getCyberColor } from './color-utils.js';
+import { getReasonColor } from './color-utils.js';
 import { gridContext, updateGridConfig, aggregateData } from './aggregator.js';
 
 export function initRenderer(DOM) {
@@ -85,9 +85,17 @@ export function initRenderer(DOM) {
             // 1. 绘制热力图网格数据
             for (let row = startRow; row <= endRow; row++) {
                 for (let col = startCol; col <= endCol; col++) {
-                    const val = gridData[row * COLS + col];
-                    if (val > 0) {
-                        ctx.fillStyle = getCyberColor(val, maxRef);
+                    const idx = (row * COLS + col) * 4;
+                    const counts = [
+                        gridData[idx],
+                        gridData[idx + 1],
+                        gridData[idx + 2],
+                        gridData[idx + 3]
+                    ];
+
+                    // 只要该网格包含任何有效数据
+                    if (counts[0] + counts[1] + counts[2] + counts[3] > 0) {
+                        ctx.fillStyle = getReasonColor(counts, gridContext.maxRef);
                         ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
                     }
                 }

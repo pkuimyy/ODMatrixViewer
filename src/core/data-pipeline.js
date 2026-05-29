@@ -36,8 +36,8 @@ export function initDataPipeline(DOM) {
             DOM.fileStatus.classList.replace('text--accent', 'text--muted');
             console.log('[Parser] Finished! Total batches:', dataBatches.length);
 
-            // 🚨 解除注释：将数据挂载到全局状态，这会触发渲染引擎的监听
-            state.rawBatches = dataBatches;
+            // 使用扩展运算符创建全新引用，确保 state Proxy 能够监听到变动
+            state.rawBatches = [...dataBatches];
         } else if (msg.type === 'error') {
             DOM.fileStatus.textContent = 'Parse Error';
             console.error('[Parser Error]', msg.error);

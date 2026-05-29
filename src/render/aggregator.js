@@ -9,7 +9,8 @@ export const gridContext = {
     COLS: 0,
     ROWS: 0,
     gridData: new Int32Array(0),
-    maxRef: 1
+    maxRef: 1,
+    numReasons: 4 // 🚀 新增分类数
 };
 
 /**
@@ -22,10 +23,11 @@ export function updateGridConfig() {
     gridContext.COLS = Math.ceil(gridContext.WORLD_SIZE / gridContext.GRID_RES);
     gridContext.ROWS = Math.ceil(gridContext.WORLD_SIZE / gridContext.GRID_RES);
 
-    gridContext.gridData = new Int32Array(gridContext.COLS * gridContext.ROWS);
-    console.log(
-        `[Aggregator] Grid Updated: ${gridContext.COLS}x${gridContext.ROWS}, Cell Size: ${state.gridSize}u`
+    // 🚀 容量扩大 4 倍，结构为交错排列: [C0, C1, C2, C3,  C0, C1...]
+    gridContext.gridData = new Int32Array(
+        gridContext.COLS * gridContext.ROWS * gridContext.numReasons
     );
+    console.log(`[Aggregator] Grid Updated: ${gridContext.COLS}x${gridContext.ROWS}`);
     aggregateData();
 }
 
@@ -35,25 +37,30 @@ export function updateGridConfig() {
 export function aggregateData() {
     gridContext.gridData.fill(0);
     const batches = state.rawBatches;
-    const { COLS, ROWS, HALF_WORLD, GRID_RES } = gridContext;
+    const { COLS, ROWS, HALF_WORLD, GRID_RES, numReasons } = gridContext;
 
     if (batches && batches.length > 0) {
-        const timeSlice = state.timeSlice;
-        const showAllDay = state.showAllDay;
-        const showO = state.filters.O;
-        const showD = state.filters.D;
-        const focusedGrid = state.focusedGrid;
-        const focusedArea = state.focusedArea;
+        const {
+            timeSlice,
+            showAllDay,
+            filters: { O: showO, D: showD, reasons: activeReasons },
+            focusedGrid,
+            focusedArea
+        } = state;
 
-        const inArea = (c, r, area) => {
-            return c >= area.startCol && c <= area.endCol && r >= area.startRow && r <= area.endRow;
-        };
+        const inArea = (c, r, area) =>
+            c >= area.startCol && c <= area.endCol && r >= area.startRow && r <= area.endRow;
 
         for (let b = 0; b < batches.length; b++) {
             const batch = batches[b];
-            for (let i = 0; i < batch.length; i += 5) {
+            // 🚀 步长更新为 6
+            for (let i = 0; i < batch.length; i += 6) {
                 const recordHour = batch[i + 4];
+                const reasonId = batch[i + 5];
+
                 if (!showAllDay && recordHour !== timeSlice) continue;
+                // 🚀 如果该 reason 在界面上被关掉，直接跳过计算
+                if (!activeReasons[reasonId]) continue;
 
                 const oCol = Math.floor((batch[i] + HALF_WORLD) / GRID_RES);
                 const oRow = Math.floor((HALF_WORLD - batch[i + 1]) / GRID_RES);
@@ -67,25 +74,30 @@ export function aggregateData() {
 
                 if (focusedGrid) {
                     if (showO && dCol === focusedGrid.col && dRow === focusedGrid.row)
-                        gridContext.gridData[oRow * COLS + oCol]++;
+                        gridContext.gridData[(oRow * COLS + oCol) * numReasons + reasonId]++;
                     if (showD && oCol === focusedGrid.col && oRow === focusedGrid.row)
-                        gridContext.gridData[dRow * COLS + dCol]++;
+                        gridContext.gridData[(dRow * COLS + dCol) * numReasons + reasonId]++;
                 } else if (focusedArea) {
                     if (showO && inArea(dCol, dRow, focusedArea))
-                        gridContext.gridData[oRow * COLS + oCol]++;
+                        gridContext.gridData[(oRow * COLS + oCol) * numReasons + reasonId]++;
                     if (showD && inArea(oCol, oRow, focusedArea))
-                        gridContext.gridData[dRow * COLS + dCol]++;
+                        gridContext.gridData[(dRow * COLS + dCol) * numReasons + reasonId]++;
                 } else {
-                    if (showO) gridContext.gridData[oRow * COLS + oCol]++;
-                    if (showD) gridContext.gridData[dRow * COLS + dCol]++;
+                    if (showO) gridContext.gridData[(oRow * COLS + oCol) * numReasons + reasonId]++;
+                    if (showD) gridContext.gridData[(dRow * COLS + dCol) * numReasons + reasonId]++;
                 }
             }
         }
 
-        // 动态计算 95% 分位数，避免极端密集点破坏整体热力图的色彩区分度
+        // 计算 95% 分位数最大参考值，采用 4 个维度的总和
         const activeValues = [];
-        for (let i = 0; i < gridContext.gridData.length; i++) {
-            if (gridContext.gridData[i] > 0) activeValues.push(gridContext.gridData[i]);
+        for (let i = 0; i < gridContext.gridData.length; i += numReasons) {
+            const sum =
+                gridContext.gridData[i] +
+                gridContext.gridData[i + 1] +
+                gridContext.gridData[i + 2] +
+                gridContext.gridData[i + 3];
+            if (sum > 0) activeValues.push(sum);
         }
 
         if (activeValues.length > 0) {
@@ -97,6 +109,4 @@ export function aggregateData() {
     } else {
         gridContext.maxRef = 1;
     }
-
-    if (gridContext.maxRef < 1) gridContext.maxRef = 1;
 }
